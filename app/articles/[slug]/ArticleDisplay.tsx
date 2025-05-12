@@ -162,7 +162,7 @@ export default function ArticleDisplay({ slug }: ArticleDisplayProps) {
           </div>
         </header>
         
-        <div className="article-content" dangerouslySetInnerHTML={{ __html: article.content }} />
+        <div className="article-content text-gray-800" dangerouslySetInnerHTML={{ __html: article.content }} />
       </article>
     </div>
   );

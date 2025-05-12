@@ -41,7 +41,7 @@ async function DiseaseDetail({ id }: { id: string }) {
           </div>
 
           <div className="prose max-w-none mb-8">
-            <p className="text-lg text-gray-700">{disease.description || 'Không có mô tả chi tiết'}</p>
+            <p className="text-lg text-gray-300">{disease.description || 'Không có mô tả chi tiết'}</p>
           </div>
         </div>
 
@@ -49,7 +49,7 @@ async function DiseaseDetail({ id }: { id: string }) {
         {article && (
           <div className="bg-gray-50 p-6 rounded-lg mb-8">
             <h2 className="text-2xl font-semibold mb-4">Thông tin chi tiết</h2>
-            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: article.content }} />
+            <div className="prose max-w-none text-gray-800" dangerouslySetInnerHTML={{ __html: article.content }} />
           </div>
         )}
 
