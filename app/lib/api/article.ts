@@ -1,5 +1,21 @@
 import { API_BASE_URL } from '@/app/lib/utils/constants';
 
+interface ArticleImage {
+  id: string;
+  image_id: string;
+  object_type: string;
+  object_id: string;
+  usage: string;
+  image: {
+    rel_path: string;
+    mime_type: string;
+    id: string;
+    base_url: string;
+    uploaded_at: string;
+    uploaded_by: string;
+  };
+}
+
 export interface Article {
   id: string;
   title: string;
@@ -13,6 +29,15 @@ export interface Article {
   deleted_by: string | null;
   published: boolean;
   slug: string;
+  summary?: string;
+  creator?: {
+    user_id: string;
+    username: string;
+    deleted_at: string | null;
+    created_at: string;
+    updated_at: string;
+  };
+  images?: ArticleImage[];
 }
 
 export interface ArticleCreate {

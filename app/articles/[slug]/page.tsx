@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getArticleBySlug, getArticle } from '@/app/lib/api/article';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/app/lib/context/AuthContext';
+import { getFullImageUrl } from '@/app/lib/utils/constants';
 
 export default function ArticlePage({ params }: { params: { slug: string } }) {
   const [article, setArticle] = useState<{
@@ -14,6 +16,11 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
     author: string | null;
     created_at: string | null;
     published?: boolean;
+    images?: { 
+      image: { base_url: string; rel_path: string };
+      usage: string;
+    }[];
+    creator?: { username: string };
   } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -124,11 +131,25 @@ export default function ArticlePage({ params }: { params: { slug: string } }) {
       
       <article className="prose prose-lg mx-auto">
         <header className="mb-8">
+          {article.images && article.images.length > 0 && (
+            <div className="relative h-72 w-full mb-6 rounded-lg overflow-hidden">
+              <Image 
+                src={getFullImageUrl(
+                  article.images.find(img => img.usage === 'cover')?.image.base_url || article.images[0].image.base_url,
+                  article.images.find(img => img.usage === 'cover')?.image.rel_path || article.images[0].image.rel_path
+                )}
+                alt={article.title}
+                fill
+                style={{objectFit: "cover"}}
+                priority
+              />
+            </div>
+          )}
           <h1 className="text-4xl font-bold mb-4">{article.title}</h1>
           <div className="text-gray-600">
-            {article.author && (
+            {article.creator?.username && (
               <span className="mr-4">
-                Tác giả: <span className="font-medium">{article.author}</span>
+                Tác giả: <span className="font-medium">{article.creator.username}</span>
               </span>
             )}
             {formattedDate && (

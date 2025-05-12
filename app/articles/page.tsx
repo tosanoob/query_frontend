@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getArticles, Article } from '@/app/lib/api/article';
+import Image from 'next/image';
+import { getFullImageUrl } from '@/app/lib/utils/constants';
 
 export default function ArticlesListPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -54,7 +56,7 @@ export default function ArticlesListPage() {
     }
   }
 
-  function truncateText(text: string, maxLength = 150) {
+  function truncateText(text: string, maxLength = 100) {
     if (!text) return '';
     if (text.length <= maxLength) return text;
     return text.slice(0, maxLength) + '...';
@@ -62,7 +64,7 @@ export default function ArticlesListPage() {
 
   return (
     <div className="max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-      <h1 className="text-3xl font-bold mb-8">Bài viết về Bệnh Da liễu</h1>
+      <h1 className="text-3xl font-bold mb-8 text-blue-700">Bài viết về Bệnh Da liễu</h1>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
@@ -85,8 +87,21 @@ export default function ArticlesListPage() {
               {articles.map((article) => (
                 <Link key={article.id} href={`/articles/${article.slug || article.id}`}>
                   <div className="bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
+                    {article.images && article.images.length > 0 && (
+                      <div className="relative h-48 w-full">
+                        <Image 
+                          src={getFullImageUrl(
+                            article.images.find(img => img.usage === 'cover')?.image.base_url || article.images[0].image.base_url,
+                            article.images.find(img => img.usage === 'cover')?.image.rel_path || article.images[0].image.rel_path
+                          )}
+                          alt={article.title || ''}
+                          fill
+                          style={{objectFit: "cover"}}
+                        />
+                      </div>
+                    )}
                     <div className="p-6 flex-grow">
-                      <h2 className="text-xl font-semibold mb-2 hover:text-primary transition-colors">
+                      <h2 className="text-xl font-semibold mb-2 hover:text-blue-500 transition-colors text-blue-700">
                         {article.title}
                       </h2>
                       <div className="text-sm text-gray-500 mb-3">
@@ -98,7 +113,7 @@ export default function ArticlesListPage() {
                       </div>
                     </div>
                     <div className="px-6 pb-4">
-                      <span className="text-primary text-sm font-medium">
+                      <span className="text-blue-700 text-sm font-medium">
                         Đọc tiếp &rarr;
                       </span>
                     </div>

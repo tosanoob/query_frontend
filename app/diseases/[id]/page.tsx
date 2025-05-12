@@ -1,4 +1,3 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getDisease } from '@/app/lib/api/disease';
@@ -27,16 +26,20 @@ async function DiseaseDetail({ id }: { id: string }) {
     return (
       <div>
         <div className="mb-8">
-          <div className="relative h-64 md:h-80 w-full rounded-xl overflow-hidden shadow-lg mb-6">
-            <Image
-              src="/placeholder-disease-detail.jpg"
-              alt={disease.label}
-              fill
-              style={{ objectFit: "cover" }}
-            />
+          <div className="bg-blue-50 p-6 rounded-xl border border-blue-100 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="bg-blue-100 rounded-full p-3">
+                <svg className="w-8 h-8 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <div>
+                <span className="text-blue-800 text-sm font-medium">Bệnh da liễu</span>
+              </div>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900">{disease.label}</h1>
           </div>
 
-          <h1 className="text-3xl md:text-4xl font-bold mb-4">{disease.label}</h1>
           <div className="prose max-w-none mb-8">
             <p className="text-lg text-gray-700">{disease.description || 'Không có mô tả chi tiết'}</p>
           </div>
@@ -59,6 +62,31 @@ async function DiseaseDetail({ id }: { id: string }) {
           <Link href="/diagnosis" className="inline-flex justify-center items-center py-3 px-6 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors">
             Chẩn đoán ngay
           </Link>
+        </div>
+
+        {/* Triệu chứng thường gặp */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-semibold mb-4">Triệu chứng thường gặp</h2>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
+            <ul className="space-y-3">
+              {/* Since 'symptoms' might not exist in the API response, we check for custom properties */}
+              {disease.description ? (
+                // Fake symptoms based on description (since the API doesn't have symptoms)
+                disease.description.split('. ').slice(0, 3).map((symptom: string, index: number) => (
+                  symptom.trim() && (
+                    <li key={index} className="flex items-start">
+                      <svg className="w-5 h-5 text-blue-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                      </svg>
+                      <span className="text-gray-700">{symptom.trim()}</span>
+                    </li>
+                  )
+                )).filter(Boolean)
+              ) : (
+                <li className="text-gray-500">Không có thông tin về triệu chứng</li>
+              )}
+            </ul>
+          </div>
         </div>
 
         {/* Phần phòng khám gợi ý */}

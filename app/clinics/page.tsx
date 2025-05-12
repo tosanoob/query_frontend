@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getClinics } from '../lib/api/clinic';
+import { getFullImageUrl } from '../lib/utils/constants';
 
 // Component để hiển thị danh sách phòng khám
 async function ClinicsList() {
@@ -21,19 +22,35 @@ async function ClinicsList() {
         {clinics.map((clinic) => (
           <Link href={`/clinics/${clinic.id}`} key={clinic.id} className="block bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
             <div className="relative h-48 w-full">
-              <Image 
-                src={`/placeholder-clinic.jpg`}
-                alt={clinic.name}
-                fill
-                style={{objectFit: "cover"}}
-              />
+              {clinic.images && clinic.images.length > 0 ? (
+                <Image 
+                  src={getFullImageUrl(
+                    clinic.images.find(img => img.usage === 'cover')?.image.base_url || clinic.images[0].image.base_url,
+                    clinic.images.find(img => img.usage === 'cover')?.image.rel_path || clinic.images[0].image.rel_path
+                  )}
+                  alt={clinic.name}
+                  fill
+                  style={{objectFit: "cover"}}
+                />
+              ) : (
+                <Image 
+                  src={`/placeholder-clinic.jpg`}
+                  alt={clinic.name}
+                  fill
+                  style={{objectFit: "cover"}}
+                />
+              )}
             </div>
             <div className="p-4">
               <h3 className="text-lg font-semibold mb-2 text-gray-900">
                 {clinic.name}
               </h3>
               <p className="text-sm text-gray-600 mb-2">
-                {clinic.location ? `Địa chỉ: ${clinic.location}` : 'Không có địa chỉ'}
+                {clinic.location 
+                  ? `Địa chỉ: ${clinic.location.length > 100 
+                      ? clinic.location.substring(0, 100) + '...' 
+                      : clinic.location}` 
+                  : 'Không có địa chỉ'}
               </p>
               {clinic.phone_number && (
                 <p className="text-sm text-gray-600 mb-2">
@@ -42,7 +59,9 @@ async function ClinicsList() {
               )}
               {clinic.website && (
                 <p className="text-sm text-gray-600">
-                  <span className="font-medium">Website:</span> {clinic.website}
+                  <span className="font-medium">Website:</span> {clinic.website.length > 100 
+                    ? clinic.website.substring(0, 100) + '...' 
+                    : clinic.website}
                 </p>
               )}
             </div>

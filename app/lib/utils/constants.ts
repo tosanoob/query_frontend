@@ -29,4 +29,20 @@ export const CONTACT_INFO = {
   ADDRESS: '123 Đường Nguyễn Văn A, Quận 1, TP.HCM',
 };
 
-export const API_BASE_URL = 'https://bird-faithful-hagfish.ngrok-free.app'; 
+/**
+ * API configuration
+ */
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://bird-faithful-hagfish.ngrok-free.app';
+
+// API Endpoints
+export const API_ENDPOINTS = {
+  DIAGNOSIS: '/api/diagnosis/analyze',
+  DISEASES: '/api/diseases',
+  CLINICS: '/api/clinics',
+  ARTICLES: '/api/articles',
+};
+
+// Function to construct the full image URL from base_url and rel_path
+export function getFullImageUrl(baseUrl: string, relPath: string): string {
+  return `${API_BASE_URL}${baseUrl}/${relPath}`;
+} 

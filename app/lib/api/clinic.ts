@@ -1,5 +1,21 @@
 import { API_BASE_URL } from '@/app/lib/utils/constants';
 
+interface ClinicImage {
+  id: string;
+  image_id: string;
+  object_type: string;
+  object_id: string;
+  usage: string;
+  image: {
+    rel_path: string;
+    mime_type: string;
+    id: string;
+    base_url: string;
+    uploaded_at: string;
+    uploaded_by: string;
+  };
+}
+
 export interface Clinic {
   id: string;
   name: string;
@@ -13,6 +29,7 @@ export interface Clinic {
   created_by: string | null;
   updated_by: string | null;
   deleted_by: string | null;
+  images?: ClinicImage[];
 }
 
 export interface ClinicCreate {

@@ -4,6 +4,7 @@ import { getDiseases } from './lib/api/disease';
 import { getArticles } from './lib/api/article';
 import { getClinics } from './lib/api/clinic';
 import { Suspense } from 'react';
+import { getFullImageUrl } from './lib/utils/constants';
 
 // Tạo một component để hiển thị danh sách bệnh
 async function DiseasesList() {
@@ -16,20 +17,36 @@ async function DiseasesList() {
         {diseases.length > 0 ? (
           diseases.map((disease) => (
             <Link href={`/diseases/${disease.id}`} key={disease.id} className="group block bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-              <div className="relative h-48 w-full">
-                <Image 
-                  src={`/placeholder-disease.jpg`}
-                  alt={disease.label}
-                  fill
-                  style={{objectFit: "cover"}}
-                />
-              </div>
+              {/* <div className="relative h-48 w-full">
+                {disease.images && disease.images.length > 0 ? (
+                  <Image 
+                    src={getFullImageUrl(
+                      disease.images.find(img => img.usage === 'cover')?.image.base_url || disease.images[0].image.base_url,
+                      disease.images.find(img => img.usage === 'cover')?.image.rel_path || disease.images[0].image.rel_path
+                    )}
+                    alt={disease.label}
+                    fill
+                    style={{objectFit: "cover"}}
+                  />
+                ) : (
+                  <Image 
+                    src={`/placeholder-disease.jpg`}
+                    alt={disease.label}
+                    fill
+                    style={{objectFit: "cover"}}
+                  />
+                )}
+              </div> */}
               <div className="p-4">
                 <h3 className="text-lg font-semibold mb-2 text-gray-900 group-hover:text-blue-600 transition-colors">
                   {disease.label}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  {disease.description || 'Không có mô tả chi tiết'}
+                  {disease.description 
+                    ? (disease.description.length > 100 
+                        ? disease.description.substring(0, 100) + '...' 
+                        : disease.description)
+                    : 'Không có mô tả chi tiết'}
                 </p>
               </div>
             </Link>
@@ -63,19 +80,35 @@ async function ClinicsList() {
           clinics.map((clinic) => (
             <Link href={`/clinics/${clinic.id}`} key={clinic.id} className="block bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
               <div className="relative h-40 w-full">
-                <Image 
-                  src={`/placeholder-clinic.jpg`}
-                  alt={clinic.name}
-                  fill
-                  style={{objectFit: "cover"}}
-                />
+                {clinic.images && clinic.images.length > 0 ? (
+                  <Image 
+                    src={getFullImageUrl(
+                      clinic.images.find(img => img.usage === 'cover')?.image.base_url || clinic.images[0].image.base_url,
+                      clinic.images.find(img => img.usage === 'cover')?.image.rel_path || clinic.images[0].image.rel_path
+                    )}
+                    alt={clinic.name}
+                    fill
+                    style={{objectFit: "cover"}}
+                  />
+                ) : (
+                  <Image 
+                    src={`/placeholder-clinic.jpg`}
+                    alt={clinic.name}
+                    fill
+                    style={{objectFit: "cover"}}
+                  />
+                )}
               </div>
               <div className="p-4">
                 <h3 className="text-lg font-semibold mb-2 text-gray-900">
                   {clinic.name}
                 </h3>
                 <p className="text-sm text-gray-600 mb-2">
-                  {clinic.location ? `Địa chỉ: ${clinic.location}` : 'Không có địa chỉ'}
+                  {clinic.location 
+                    ? `Địa chỉ: ${clinic.location.length > 100 
+                        ? clinic.location.substring(0, 100) + '...' 
+                        : clinic.location}` 
+                    : 'Không có địa chỉ'}
                 </p>
                 {clinic.phone_number && (
                   <p className="text-sm text-gray-600">
@@ -102,7 +135,39 @@ async function ClinicsList() {
   }
 }
 
-export default function Home() {
+export default async function Home() {
+  // Get a featured article for the hero image
+  let heroImage = '/placeholder-healthcare.jpg';
+  let diagnosisImage = '/placeholder-ai.jpg';
+  
+  try {
+    const articles = await getArticles(0, 5);
+    
+    // Find an article with cover image for hero section
+    const heroArticle = articles.find(article => 
+      article.images && article.images.length > 0 && 
+      article.images.some(img => img.usage === 'cover')
+    );
+    
+    if (heroArticle && heroArticle.images) {
+      const coverImage = heroArticle.images.find(img => img.usage === 'cover') || heroArticle.images[0];
+      heroImage = getFullImageUrl(coverImage.image.base_url, coverImage.image.rel_path);
+    }
+    
+    // Find a different article for the diagnosis section
+    const diagnosisArticle = articles.find(article => 
+      article !== heroArticle && 
+      article.images && article.images.length > 0
+    );
+    
+    if (diagnosisArticle && diagnosisArticle.images) {
+      const coverImage = diagnosisArticle.images.find(img => img.usage === 'cover') || diagnosisArticle.images[0];
+      diagnosisImage = getFullImageUrl(coverImage.image.base_url, coverImage.image.rel_path);
+    }
+  } catch (error) {
+    console.error('Error fetching articles for images:', error);
+  }
+  
   return (
     <div className="flex flex-col items-center">
       {/* Hero Section */}
@@ -127,7 +192,7 @@ export default function Home() {
             </div>
             <div className="relative h-64 md:h-80 lg:h-96 w-full rounded-xl overflow-hidden shadow-lg">
               <Image
-                src="/placeholder-healthcare.jpg"
+                src={heroImage}
                 alt="Bệnh da liễu"
                 fill
                 style={{objectFit: "cover"}}
@@ -177,7 +242,7 @@ export default function Home() {
             <div className="order-2 md:order-1">
               <div className="relative h-64 md:h-80 w-full rounded-xl overflow-hidden shadow-lg">
                 <Image
-                  src="/placeholder-ai.jpg"
+                  src={diagnosisImage}
                   alt="Chẩn đoán bằng AI"
                   fill
                   style={{objectFit: "cover"}}
@@ -196,19 +261,19 @@ export default function Home() {
                   <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span>Phân tích hình ảnh chính xác</span>
+                  <span className="text-gray-600">Phân tích hình ảnh chính xác</span>
                 </li>
                 <li className="flex items-start">
                   <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span>Nhận diện đặc điểm bệnh</span>
+                  <span className="text-gray-600">Nhận diện đặc điểm bệnh</span>
                 </li>
                 <li className="flex items-start">
                   <svg className="h-5 w-5 text-green-500 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  <span>Tư vấn bước tiếp theo</span>
+                  <span className="text-gray-600">Tư vấn bước tiếp theo</span>
                 </li>
               </ul>
               <Link href="/diagnosis" className="inline-flex justify-center items-center py-3 px-6 rounded-md bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors">

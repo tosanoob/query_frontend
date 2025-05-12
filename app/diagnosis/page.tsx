@@ -3,21 +3,82 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { API_BASE_URL, API_ENDPOINTS } from '../lib/utils/constants';
 
 export default function DiagnosisPage() {
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [symptoms, setSymptoms] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const router = useRouter();
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Check file size (maximum 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        setErrorMessage('Kích thước file quá lớn. Vui lòng chọn file dưới 10MB.');
+        return;
+      }
+      
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        setErrorMessage('Vui lòng chọn file hình ảnh.');
+        return;
+      }
+      
+      setErrorMessage(null);
       setImage(file);
+      
+      // Convert image to RGB format before creating base64 string
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+      reader.onload = (event: ProgressEvent<FileReader>) => {
+        const img = document.createElement('img');
+        img.onload = () => {
+          // Create a canvas to draw the image
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          if (!ctx) {
+            setErrorMessage('Không thể xử lý hình ảnh. Vui lòng thử lại.');
+            return;
+          }
+          
+          // Set canvas dimensions to match image
+          canvas.width = img.width;
+          canvas.height = img.height;
+          
+          // Draw image with white background to ensure RGB format
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0);
+          
+          // Convert canvas to data URL (JPEG for RGB format)
+          try {
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            setImagePreview(dataUrl);
+          } catch (error) {
+            console.error('Lỗi khi chuyển đổi hình ảnh:', error);
+            setErrorMessage('Không thể xử lý hình ảnh. Vui lòng thử lại.');
+          }
+        };
+        
+        img.onerror = () => {
+          setErrorMessage('Không thể tải hình ảnh. Vui lòng thử lại.');
+        };
+        
+        if (event.target?.result) {
+          img.src = event.target.result as string;
+        }
       };
+      
+      reader.onerror = () => {
+        setErrorMessage('Lỗi khi đọc file. Vui lòng thử lại.');
+        setImage(null);
+      };
+      
       reader.readAsDataURL(file);
     }
   };
@@ -25,28 +86,124 @@ export default function DiagnosisPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!image) {
-      alert('Vui lòng tải lên hình ảnh để tiến hành chẩn đoán');
+    if (!image && !symptoms) {
+      setErrorMessage('Vui lòng tải lên hình ảnh hoặc mô tả triệu chứng để tiến hành chẩn đoán');
       return;
     }
 
     setIsSubmitting(true);
+    setErrorMessage(null);
     
-    // Mô phỏng API call (sẽ thay thế bằng API call thực tế sau)
-    setTimeout(() => {
+    try {
+      // Xóa kết quả chẩn đoán cũ trước khi bắt đầu chẩn đoán mới
+      localStorage.removeItem('diagnosis-result');
+      
+      // Tạo request payload
+      const payload: { image_base64?: string; text?: string } = {};
+      
+      if (image && imagePreview) {
+        // Lấy phần base64 từ string (loại bỏ phần prefix "data:image/jpeg;base64,")
+        const base64Image = imagePreview.split(',')[1];
+        payload.image_base64 = base64Image;
+        
+        // Xóa cache cũ trước khi lưu ảnh mới
+        try {
+          if ('caches' in window) {
+            // Xóa cache cũ
+            await caches.delete('diagnosis-images');
+            
+            // Tạo cache mới
+            const cache = await caches.open('diagnosis-images');
+            const response = new Response(image);
+            await cache.put('latest-image', response);
+            
+            // Cập nhật imagePreview vào localStorage, ghi đè nếu đã tồn tại
+            localStorage.setItem('diagnosis-image-preview', imagePreview);
+          }
+        } catch (cacheError) {
+          console.error('Lỗi khi lưu cache:', cacheError);
+          // Không dừng quy trình nếu việc lưu cache thất bại
+        }
+      } else {
+        // Nếu không có ảnh mới, xóa ảnh cũ trong cache và localStorage
+        try {
+          if ('caches' in window) {
+            await caches.delete('diagnosis-images');
+          }
+          localStorage.removeItem('diagnosis-image-preview');
+        } catch (error) {
+          console.error('Lỗi khi xóa cache:', error);
+        }
+      }
+      
+      if (symptoms) {
+        payload.text = symptoms;
+      }
+      
+      // Gọi API
+      const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.DIAGNOSIS}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': '1'
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Không thể đọc thông báo lỗi');
+        throw new Error(`Lỗi API: ${response.status} - ${errorText}`);
+      }
+      
+      const result = await response.json();
+      
+      // Kiểm tra cấu trúc kết quả
+      if (!result.labels || !Array.isArray(result.labels)) {
+        throw new Error('Dữ liệu phản hồi không hợp lệ');
+      }
+      
+      // Chuyển đổi cấu trúc labels từ mảng 2D sang mảng đối tượng và sắp xếp
+      // Format từ API: [["BỆNH_A", 0.75], ["BỆNH_B", 0.25]]
+      // Format cần chuyển đổi: [{name: "BỆNH_A", score: 0.75}, {name: "BỆNH_B", score: 0.25}]
+      if (Array.isArray(result.labels[0])) {
+        const formattedLabels = result.labels.map((label: [string, number]) => ({
+          name: label[0],
+          score: label[1]
+        }));
+        
+        // Sắp xếp theo điểm số giảm dần
+        formattedLabels.sort((a: {score: number}, b: {score: number}) => b.score - a.score);
+        
+        // Cập nhật kết quả với labels đã định dạng
+        result.labels = formattedLabels;
+      }
+      
+      // Lưu kết quả vào localStorage để trang kết quả có thể truy cập
+      localStorage.setItem('diagnosis-result', JSON.stringify(result));
+      
+      // Chuyển hướng đến trang kết quả
+      router.push('/diagnosis/result');
+    } catch (error) {
+      console.error('Lỗi khi gửi yêu cầu chẩn đoán:', error);
+      setErrorMessage(`Có lỗi xảy ra: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
+    } finally {
       setIsSubmitting(false);
-      // Chuyển hướng đến trang kết quả (mô phỏng)
-      window.location.href = '/diagnosis/result';
-    }, 2000);
+    }
   };
 
   return (
     <div className="container mx-auto px-4 py-10">
       <div className="max-w-3xl mx-auto">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Chẩn đoán bệnh da liễu</h1>
+          <h1 className="text-3xl font-bold text-white-900 mb-4">Chẩn đoán bệnh da liễu</h1>
           <p className="text-gray-600">Tải lên hình ảnh và mô tả triệu chứng của bạn để nhận chẩn đoán</p>
         </div>
+
+        {errorMessage && (
+          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+            <p>{errorMessage}</p>
+          </div>
+        )}
 
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
           <div className="p-6">
@@ -100,7 +257,7 @@ export default function DiagnosisPage() {
 
               <div className="mb-6">
                 <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="symptoms">
-                  Mô tả triệu chứng (không bắt buộc)
+                  Mô tả triệu chứng {!image && <span className="text-red-500">*</span>}
                 </label>
                 <textarea
                   id="symptoms"
@@ -108,8 +265,11 @@ export default function DiagnosisPage() {
                   value={symptoms}
                   onChange={(e) => setSymptoms(e.target.value)}
                   placeholder="Mô tả chi tiết các triệu chứng, thời gian xuất hiện, các thay đổi trên da, vị trí, cảm giác (đau, ngứa, v.v.)..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-800 placeholder-gray-600"
                 />
+                <p className="mt-1 text-sm text-gray-500">
+                  {!image ? "Vui lòng mô tả triệu chứng hoặc tải lên hình ảnh" : "Mô tả thêm triệu chứng sẽ giúp chẩn đoán chính xác hơn"}
+                </p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-end">
@@ -121,9 +281,9 @@ export default function DiagnosisPage() {
                 </Link>
                 <button
                   type="submit"
-                  disabled={isSubmitting || !image}
+                  disabled={isSubmitting || (!image && !symptoms)}
                   className={`px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors ${
-                    (isSubmitting || !image) ? 'opacity-50 cursor-not-allowed' : ''
+                    (isSubmitting || (!image && !symptoms)) ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
                   {isSubmitting ? 'Đang xử lý...' : 'Chẩn đoán'}
