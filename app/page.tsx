@@ -1,5 +1,106 @@
 import Link from 'next/link';
 import Image from 'next/image';
+import { getDiseases } from './lib/api/disease';
+import { getArticles } from './lib/api/article';
+import { getClinics } from './lib/api/clinic';
+import { Suspense } from 'react';
+
+// Tạo một component để hiển thị danh sách bệnh
+async function DiseasesList() {
+  // Lấy dữ liệu bệnh từ API
+  try {
+    const diseases = await getDiseases(0, 4);
+    
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {diseases.length > 0 ? (
+          diseases.map((disease) => (
+            <Link href={`/diseases/${disease.id}`} key={disease.id} className="group block bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
+              <div className="relative h-48 w-full">
+                <Image 
+                  src={`/placeholder-disease.jpg`}
+                  alt={disease.label}
+                  fill
+                  style={{objectFit: "cover"}}
+                />
+              </div>
+              <div className="p-4">
+                <h3 className="text-lg font-semibold mb-2 text-gray-900 group-hover:text-blue-600 transition-colors">
+                  {disease.label}
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {disease.description || 'Không có mô tả chi tiết'}
+                </p>
+              </div>
+            </Link>
+          ))
+        ) : (
+          <div className="col-span-full text-center py-10">
+            <p className="text-gray-500">Không có dữ liệu bệnh</p>
+          </div>
+        )}
+      </div>
+    );
+  } catch (error) {
+    console.error('Error fetching diseases:', error);
+    return (
+      <div className="col-span-full text-center py-10">
+        <p className="text-red-500">Không thể tải dữ liệu bệnh</p>
+      </div>
+    );
+  }
+}
+
+// Tạo một component để hiển thị danh sách phòng khám
+async function ClinicsList() {
+  // Lấy dữ liệu phòng khám từ API
+  try {
+    const clinics = await getClinics(0, 3);
+    
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {clinics.length > 0 ? (
+          clinics.map((clinic) => (
+            <Link href={`/clinics/${clinic.id}`} key={clinic.id} className="block bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
+              <div className="relative h-40 w-full">
+                <Image 
+                  src={`/placeholder-clinic.jpg`}
+                  alt={clinic.name}
+                  fill
+                  style={{objectFit: "cover"}}
+                />
+              </div>
+              <div className="p-4">
+                <h3 className="text-lg font-semibold mb-2 text-gray-900">
+                  {clinic.name}
+                </h3>
+                <p className="text-sm text-gray-600 mb-2">
+                  {clinic.location ? `Địa chỉ: ${clinic.location}` : 'Không có địa chỉ'}
+                </p>
+                {clinic.phone_number && (
+                  <p className="text-sm text-gray-600">
+                    <span className="font-medium">Điện thoại:</span> {clinic.phone_number}
+                  </p>
+                )}
+              </div>
+            </Link>
+          ))
+        ) : (
+          <div className="col-span-full text-center py-10">
+            <p className="text-gray-500">Không có dữ liệu phòng khám</p>
+          </div>
+        )}
+      </div>
+    );
+  } catch (error) {
+    console.error('Error fetching clinics:', error);
+    return (
+      <div className="col-span-full text-center py-10">
+        <p className="text-red-500">Không thể tải dữ liệu phòng khám</p>
+      </div>
+    );
+  }
+}
 
 export default function Home() {
   return (
@@ -45,29 +146,21 @@ export default function Home() {
             <p className="text-gray-600">Tìm hiểu thông tin về các bệnh da liễu phổ biến</p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {/* Các card placeholder cho bệnh da liễu */}
-            {[1, 2, 3, 4].map((item) => (
-              <Link href={`/diseases/${item}`} key={item} className="group block bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-                <div className="relative h-48 w-full">
-                  <Image 
-                    src={`/placeholder-disease-${item}.jpg`}
-                    alt="Bệnh da liễu"
-                    fill
-                    style={{objectFit: "cover"}}
-                  />
+          <Suspense fallback={
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((item) => (
+                <div key={item} className="bg-white rounded-lg overflow-hidden shadow-md animate-pulse">
+                  <div className="h-48 w-full bg-gray-200"></div>
+                  <div className="p-4">
+                    <div className="h-6 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  </div>
                 </div>
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold mb-2 text-gray-900 group-hover:text-blue-600 transition-colors">
-                    Bệnh da liễu {item}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Mô tả ngắn về bệnh da liễu và các triệu chứng thường gặp.
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
+              ))}
+            </div>
+          }>
+            <DiseasesList />
+          </Suspense>
           
           <div className="text-center mt-8">
             <Link href="/diseases" className="text-blue-600 hover:text-blue-800 font-medium">
@@ -134,32 +227,22 @@ export default function Home() {
             <p className="text-gray-600">Các phòng khám da liễu uy tín trên địa bàn thành phố</p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Các card placeholder cho phòng khám */}
-            {[1, 2, 3].map((item) => (
-              <Link href={`/clinics/${item}`} key={item} className="block bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-                <div className="relative h-40 w-full">
-                  <Image 
-                    src={`/placeholder-clinic-${item}.jpg`}
-                    alt="Phòng khám"
-                    fill
-                    style={{objectFit: "cover"}}
-                  />
+          <Suspense fallback={
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((item) => (
+                <div key={item} className="bg-white rounded-lg overflow-hidden shadow-md animate-pulse">
+                  <div className="h-40 w-full bg-gray-200"></div>
+                  <div className="p-4">
+                    <div className="h-6 bg-gray-200 rounded mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                  </div>
                 </div>
-                <div className="p-4">
-                  <h3 className="text-lg font-semibold mb-2 text-gray-900">
-                    Phòng khám da liễu {item}
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-2">
-                    Địa chỉ: 123 Đường ABC, Quận XYZ, Thành phố HCM
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    <span className="font-medium">Điện thoại:</span> 028-1234-5678
-                  </p>
-                </div>
-              </Link>
-            ))}
-          </div>
+              ))}
+            </div>
+          }>
+            <ClinicsList />
+          </Suspense>
           
           <div className="text-center mt-8">
             <Link href="/clinics" className="text-blue-600 hover:text-blue-800 font-medium">
