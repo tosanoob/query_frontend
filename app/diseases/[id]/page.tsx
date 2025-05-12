@@ -4,9 +4,9 @@ import { getDisease } from '@/app/lib/api/disease';
 import { getArticle } from '@/app/lib/api/article';
 
 interface DiseasePageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 async function DiseaseDetail({ id }: { id: string }) {
@@ -114,6 +114,8 @@ async function DiseaseDetail({ id }: { id: string }) {
 }
 
 export default async function DiseasePage({ params }: DiseasePageProps) {
+  const resolvedParams = await params;
+  
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-6">
@@ -125,7 +127,7 @@ export default async function DiseasePage({ params }: DiseasePageProps) {
         </Link>
       </div>
 
-      <DiseaseDetail id={params.id} />
+      <DiseaseDetail id={resolvedParams.id} />
     </div>
   );
 } 

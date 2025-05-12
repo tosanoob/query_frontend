@@ -5,9 +5,9 @@ import { getClinic } from '@/app/lib/api/clinic';
 import { getFullImageUrl } from '@/app/lib/utils/constants';
 
 interface ClinicPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 async function ClinicDetail({ id }: { id: string }) {
@@ -133,6 +133,8 @@ async function ClinicDetail({ id }: { id: string }) {
 }
 
 export default async function ClinicPage({ params }: ClinicPageProps) {
+  const resolvedParams = await params;
+  
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-6">
@@ -144,7 +146,7 @@ export default async function ClinicPage({ params }: ClinicPageProps) {
         </Link>
       </div>
 
-      <ClinicDetail id={params.id} />
+      <ClinicDetail id={resolvedParams.id} />
     </div>
   );
 } 
