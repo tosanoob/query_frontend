@@ -1,4 +1,4 @@
-import { API_URL } from '@/app/lib/utils/constants';
+import { API_BASE_URL } from '@/app/lib/utils/constants';
 
 interface DiagnosisRequest {
   image?: File;
@@ -43,7 +43,7 @@ export const submitDiagnosis = async (data: DiagnosisRequest): Promise<Diagnosis
       formData.append('symptoms', data.symptoms);
     }
     
-    const response = await fetch(`${API_URL}/api/diagnosis`, {
+    const response = await fetch(`${API_BASE_URL}/api/diagnosis`, {
       method: 'POST',
       body: formData,
     });
@@ -66,7 +66,7 @@ export const submitDiagnosis = async (data: DiagnosisRequest): Promise<Diagnosis
  */
 export const getDiagnosisResult = async (id: string): Promise<DiagnosisResult> => {
   try {
-    const response = await fetch(`${API_URL}/api/diagnosis/${id}`, {
+    const response = await fetch(`${API_BASE_URL}/api/diagnosis/${id}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

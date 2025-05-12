@@ -1,7 +1,6 @@
 /**
  * URL của API backend
  */
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8123';
 
 /**
  * Các route của ứng dụng
@@ -28,4 +27,6 @@ export const CONTACT_INFO = {
   PHONE: '028-1234-5678',
   EMAIL: 'contact@dermaai.vn',
   ADDRESS: '123 Đường Nguyễn Văn A, Quận 1, TP.HCM',
-}; 
+};
+
+export const API_BASE_URL = 'https://bird-faithful-hagfish.ngrok-free.app'; 

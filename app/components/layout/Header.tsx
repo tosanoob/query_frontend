@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { useAuth } from '@/app/lib/context/AuthContext';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { isAuthenticated, isAdmin, logout } = useAuth();
 
   return (
     <header className="bg-white shadow-sm">
@@ -20,6 +21,9 @@ const Header = () => {
             <Link href="/" className="text-gray-700 hover:text-blue-600">
               Trang chủ
             </Link>
+            <Link href="/articles" className="text-gray-700 hover:text-blue-600">
+              Bài viết
+            </Link>
             <Link href="/diseases" className="text-gray-700 hover:text-blue-600">
               Bệnh da liễu
             </Link>
@@ -30,6 +34,35 @@ const Header = () => {
               Phòng khám
             </Link>
           </nav>
+
+          {/* Authentication */}
+          <div className="hidden md:flex items-center space-x-4">
+            {isAuthenticated ? (
+              <>
+                {isAdmin && (
+                  <Link 
+                    href="/admin" 
+                    className="text-gray-700 hover:text-blue-600"
+                  >
+                    Quản trị
+                  </Link>
+                )}
+                <button 
+                  onClick={() => logout()}
+                  className="text-gray-700 hover:text-blue-600"
+                >
+                  Đăng xuất
+                </button>
+              </>
+            ) : (
+              <Link 
+                href="/login" 
+                className="text-gray-700 hover:text-blue-600"
+              >
+                Đăng nhập
+              </Link>
+            )}
+          </div>
 
           {/* Mobile Menu Button */}
           <button 
@@ -64,6 +97,13 @@ const Header = () => {
               Trang chủ
             </Link>
             <Link 
+              href="/articles" 
+              className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              Bài viết
+            </Link>
+            <Link 
               href="/diseases" 
               className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
               onClick={() => setIsMenuOpen(false)}
@@ -84,6 +124,40 @@ const Header = () => {
             >
               Phòng khám
             </Link>
+            
+            {/* Mobile Authentication */}
+            <div className="pt-2 border-t border-gray-200">
+              {isAuthenticated ? (
+                <>
+                  {isAdmin && (
+                    <Link 
+                      href="/admin" 
+                      className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Quản trị
+                    </Link>
+                  )}
+                  <button 
+                    onClick={() => {
+                      logout();
+                      setIsMenuOpen(false);
+                    }}
+                    className="block w-full text-left px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
+                  >
+                    Đăng xuất
+                  </button>
+                </>
+              ) : (
+                <Link 
+                  href="/login" 
+                  className="block px-3 py-2 rounded-md text-gray-700 hover:bg-gray-100"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Đăng nhập
+                </Link>
+              )}
+            </div>
           </nav>
         )}
       </div>
