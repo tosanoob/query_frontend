@@ -28,7 +28,9 @@ export default function DiseasesManagement() {
   };
 
   useEffect(() => {
-    fetchDiseases();
+    if (token) {
+      fetchDiseases();
+    }
   }, [token]);
 
   const confirmDelete = (id: string) => {
@@ -52,7 +54,7 @@ export default function DiseasesManagement() {
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">Quản lý Bệnh</h1>
+        <h1 className="text-3xl text-gray-700 font-bold">Quản lý Bệnh</h1>
         <Link 
           href="/admin/diseases/new" 
           className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90"
@@ -112,7 +114,7 @@ export default function DiseasesManagement() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {disease.domain_id || 'N/A'}
+                      {disease.domain?.domain || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
                       {disease.article_id ? (

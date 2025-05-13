@@ -58,7 +58,7 @@ export default function ClinicsManagement() {
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold">Quản lý Phòng khám</h1>
+        <h1 className="text-3xl text-gray-700 font-bold">Quản lý Phòng khám</h1>
         <Link 
           href="/admin/clinics/new" 
           className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90"

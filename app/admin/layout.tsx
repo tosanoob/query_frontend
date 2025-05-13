@@ -48,7 +48,7 @@ export default function AdminLayout({
   }
 
   const isActive = (path: string) => {
-    return pathname.startsWith(path) ? 'bg-gray-100 text-primary font-medium' : 'text-gray-800';
+    return pathname.startsWith(path) ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-800 hover:bg-gray-100';
   };
 
   return (
@@ -63,31 +63,31 @@ export default function AdminLayout({
         <nav className="p-4 space-y-1">
           <Link 
             href="/admin" 
-            className={`block px-4 py-2 rounded-md hover:bg-gray-500 ${pathname === '/admin' ? 'bg-gray-500 text-primary font-medium' : 'text-gray-800'}`}
+            className={`block px-4 py-2 rounded-md ${pathname === '/admin' ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-800 hover:bg-gray-100'}`}
           >
             Tổng quan
           </Link>
           <Link 
             href="/admin/domains" 
-            className={`block px-4 py-2 rounded-md hover:bg-gray-100 ${isActive('/admin/domains')}`}
+            className={`block px-4 py-2 rounded-md ${isActive('/admin/domains')}`}
           >
             Quản lý Domain
           </Link>
           <Link 
             href="/admin/diseases" 
-            className={`block px-4 py-2 rounded-md hover:bg-gray-100 ${isActive('/admin/diseases')}`}
+            className={`block px-4 py-2 rounded-md ${isActive('/admin/diseases')}`}
           >
             Quản lý Bệnh
           </Link>
           <Link 
             href="/admin/articles" 
-            className={`block px-4 py-2 rounded-md hover:bg-gray-100 ${isActive('/admin/articles')}`}
+            className={`block px-4 py-2 rounded-md ${isActive('/admin/articles')}`}
           >
             Quản lý Bài viết
           </Link>
           <Link 
             href="/admin/clinics" 
-            className={`block px-4 py-2 rounded-md hover:bg-gray-100 ${isActive('/admin/clinics')}`}
+            className={`block px-4 py-2 rounded-md ${isActive('/admin/clinics')}`}
           >
             Quản lý Phòng khám
           </Link>

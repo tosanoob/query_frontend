@@ -16,6 +16,18 @@ interface DiseaseImage {
   };
 }
 
+interface DomainInfo {
+  id: string;
+  domain: string;
+  description: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  deleted_at: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  deleted_by: string | null;
+}
+
 export interface Disease {
   id: string;
   label: string;
@@ -30,6 +42,7 @@ export interface Disease {
   updated_by: string | null;
   deleted_by: string | null;
   images?: DiseaseImage[];
+  domain?: DomainInfo;
 }
 
 export interface DiseaseCreate {

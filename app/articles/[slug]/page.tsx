@@ -2,7 +2,7 @@ import ArticleDisplay from './ArticleDisplay';
 
 export default async function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
-  const slug = resolvedParams.slug;
+  const articleId = resolvedParams.slug;
   
-  return <ArticleDisplay slug={slug} />;
+  return <ArticleDisplay articleId={articleId} />;
 } 

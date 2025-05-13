@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/app/lib/context/AuthContext';
 import { getArticles, deleteArticle, Article } from '@/app/lib/api/article';
+import { useRouter } from 'next/navigation';
 
 export default function ArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -13,6 +14,7 @@ export default function ArticlesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const itemsPerPage = 10;
+  const router = useRouter();
 
   const loadArticles = async (page = 1) => {
     setIsLoading(true);
@@ -53,10 +55,22 @@ export default function ArticlesPage() {
     }
   };
 
+  const handleViewArticle = (e: React.MouseEvent<HTMLAnchorElement>, article: Article) => {
+    // Prevent default link behavior
+    e.preventDefault();
+    
+    // Only navigate if the article is not deleted
+    if (!article.deleted_at && article.id) {
+      router.push(`/articles/${article.id}`);
+    } else {
+      alert('Bài viết này không thể xem do đã bị xóa.');
+    }
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Quản lý Bài đăng</h1>
+        <h1 className="text-3xl font-bold text-gray-700 text-primary">Quản lý Bài viết</h1>
         <Link
           href="/admin/articles/create"
           className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition-colors"
@@ -103,19 +117,19 @@ export default function ArticlesPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">{article.title}</div>
                         <div className="text-sm text-gray-500 truncate max-w-xs">
-                          {article.slug}
+                          ID: {article.id}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{article.author || 'N/A'}</div>
+                        <div className="text-sm text-gray-900">{article.creator?.username || 'N/A'}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          article.published 
+                          !article.deleted_at 
                             ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
                         }`}>
-                          {article.published ? 'Đã xuất bản' : 'Bản nháp'}
+                          {!article.deleted_at ? 'Đang hiển thị' : 'Đã xóa'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -123,13 +137,15 @@ export default function ArticlesPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                         <div className="flex justify-center space-x-2">
-                          <Link
-                            href={`/articles/${article.slug}`}
-                            className="text-blue-600 hover:text-blue-900"
-                            target="_blank"
+                          <a
+                            href="#"
+                            onClick={(e) => handleViewArticle(e, article)}
+                            className={`text-blue-600 hover:text-blue-900 ${
+                              article.deleted_at ? 'opacity-50 cursor-not-allowed' : ''
+                            }`}
                           >
                             Xem
-                          </Link>
+                          </a>
                           <Link
                             href={`/admin/articles/${article.id}/edit`}
                             className="text-indigo-600 hover:text-indigo-900"
