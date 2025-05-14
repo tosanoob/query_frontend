@@ -13,8 +13,6 @@ interface EditArticleFormProps {
 export default function EditArticleForm({ articleId }: EditArticleFormProps) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [author, setAuthor] = useState('');
-  const [slug, setSlug] = useState('');
   const [published, setPublished] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -32,8 +30,6 @@ export default function EditArticleForm({ articleId }: EditArticleFormProps) {
         const article = await getArticle(articleId, token);
         setTitle(article.title);
         setContent(article.content);
-        setAuthor(article.author || '');
-        setSlug(article.slug);
         setPublished(article.published);
         setIsLoading(false);
       } catch (err) {
@@ -45,17 +41,6 @@ export default function EditArticleForm({ articleId }: EditArticleFormProps) {
 
     fetchArticle();
   }, [articleId, token]);
-
-  const generateSlug = () => {
-    if (!title) return;
-    
-    const slug = title
-      .toLowerCase()
-      .replace(/[^\w\s]/gi, '')
-      .replace(/\s+/g, '-');
-      
-    setSlug(slug);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,10 +62,8 @@ export default function EditArticleForm({ articleId }: EditArticleFormProps) {
       const articleData: ArticleUpdate = {
         title,
         content,
-        author: author || null,
         updated_by: user?.id,
         published,
-        slug,
       };
       
       await updateArticle(token, articleId, articleData);
@@ -103,18 +86,11 @@ export default function EditArticleForm({ articleId }: EditArticleFormProps) {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Chỉnh sửa Bài đăng</h1>
+        <h1 className="text-3xl text-gray-700 font-bold">Chỉnh sửa Bài đăng</h1>
         <div className="space-x-2">
           <Link
-            href={`/articles/${slug}`}
-            className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-            target="_blank"
-          >
-            Xem
-          </Link>
-          <Link
             href="/admin/articles"
-            className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            className="px-4 py-2 border text-gray-700 border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
           >
             Trở về
           </Link>
@@ -138,48 +114,19 @@ export default function EditArticleForm({ articleId }: EditArticleFormProps) {
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
               disabled={isSaving}
               required
             />
           </div>
 
           <div className="mb-4">
-            <label htmlFor="slug" className="block text-sm font-medium text-gray-700 mb-1">
-              Slug
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              ID bài viết
             </label>
-            <div className="flex">
-              <input
-                type="text"
-                id="slug"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                disabled={isSaving}
-              />
-              <button
-                type="button"
-                onClick={generateSlug}
-                className="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-200"
-                disabled={isSaving || !title}
-              >
-                Tạo lại
-              </button>
+            <div className="w-full text-gray-500 px-3 py-2 bg-gray-50 border border-gray-300 rounded-md">
+              {articleId} <span className="text-xs italic">(Không thể chỉnh sửa)</span>
             </div>
-          </div>
-
-          <div className="mb-4">
-            <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-1">
-              Tác giả
-            </label>
-            <input
-              type="text"
-              id="author"
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-              disabled={isSaving}
-            />
           </div>
 
           <div className="mb-6">
@@ -191,23 +138,14 @@ export default function EditArticleForm({ articleId }: EditArticleFormProps) {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={15}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              className="w-full text-gray-700 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
               disabled={isSaving}
               required
             ></textarea>
           </div>
 
-          <div className="mb-6">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={published}
-                onChange={(e) => setPublished(e.target.checked)}
-                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                disabled={isSaving}
-              />
-              <span className="ml-2 text-sm text-gray-700">Xuất bản</span>
-            </label>
+          <div className="mb-4 text-gray-600 text-sm">
+            <p>Chỉnh sửa bởi: {user?.username || 'Unknown'}</p>
           </div>
 
           <div className="flex justify-end">

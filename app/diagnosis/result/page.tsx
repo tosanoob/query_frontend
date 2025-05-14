@@ -136,8 +136,8 @@ export default function DiagnosisResultPage() {
     <div className="container mx-auto px-4 py-10">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Kết quả chẩn đoán</h1>
-          <p className="text-gray-600">Dựa trên hình ảnh và triệu chứng đã cung cấp</p>
+          <h1 className="text-3xl font-bold text-gray-100 mb-2">Kết quả chẩn đoán</h1>
+          <p className="text-gray-300">Dựa trên hình ảnh và triệu chứng đã cung cấp</p>
         </div>
 
         {mostLikelyDisease && (

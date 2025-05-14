@@ -9,10 +9,10 @@ import { useAuth } from '@/app/lib/context/AuthContext';
 import { getFullImageUrl } from '@/app/lib/utils/constants';
 
 interface ArticleDisplayProps {
-  slug: string;
+  articleId: string;
 }
 
-export default function ArticleDisplay({ slug }: ArticleDisplayProps) {
+export default function ArticleDisplay({ articleId }: ArticleDisplayProps) {
   const [article, setArticle] = useState<{
     id: string;
     title: string;
@@ -35,25 +35,15 @@ export default function ArticleDisplay({ slug }: ArticleDisplayProps) {
   useEffect(() => {
     const fetchArticle = async () => {
       try {
-        console.log('Fetching article with slug/id:', slug);
+        console.log('Fetching article with ID:', articleId);
         
         let data;
-        let fetchedByID = false;
-        
         try {
-          // Thử lấy bài viết bằng slug trước
-          data = await getArticleBySlug(slug);
-        } catch (slugError) {
-          console.error('Error fetching by slug:', slugError);
-          
-          try {
-            // Nếu không thành công, thử lấy bằng ID
-            data = await getArticle(slug);
-            fetchedByID = true;
-          } catch (idError) {
-            console.error('Error fetching by ID:', idError);
-            throw new Error('Không thể tìm thấy bài viết');
-          }
+          // Lấy bài viết bằng ID
+          data = await getArticle(articleId);
+        } catch (idError) {
+          console.error('Error fetching by ID:', idError);
+          throw new Error('Không thể tìm thấy bài viết');
         }
         
         console.log('Article data:', data);
@@ -75,7 +65,7 @@ export default function ArticleDisplay({ slug }: ArticleDisplayProps) {
     };
 
     fetchArticle();
-  }, [slug, router, isAdmin]);
+  }, [articleId, router, isAdmin]);
 
   if (isLoading) {
     return (

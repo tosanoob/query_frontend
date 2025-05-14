@@ -117,7 +117,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAuthenticated = !!user && !!token;
-  const isAdmin = isAuthenticated && user?.role === 'admin';
+  // Log the role value for debugging
+  // console.log('User role check:', { role: user?.role, username: user?.username });
+  // Check if role is 'admin' or contains the word 'admin' (case insensitive)
+  const isAdmin = isAuthenticated && !!user?.role && (
+    user.role.toLowerCase() === 'admin' || 
+    user.role.toLowerCase().includes('admin')
+  );
 
   return (
     <AuthContext.Provider 
