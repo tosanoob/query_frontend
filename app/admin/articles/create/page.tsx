@@ -9,7 +9,6 @@ import Link from 'next/link';
 export default function CreateArticlePage() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [published, setPublished] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -48,7 +47,6 @@ export default function CreateArticlePage() {
         title,
         content,
         created_by: user?.id,
-        published,
         slug: generatedSlug,
       };
       
@@ -109,19 +107,6 @@ export default function CreateArticlePage() {
               disabled={isLoading}
               required
             ></textarea>
-          </div>
-
-          <div className="mb-6">
-            <label className="flex items-center">
-              <input
-                type="checkbox"
-                checked={published}
-                onChange={(e) => setPublished(e.target.checked)}
-                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                disabled={isLoading}
-              />
-              <span className="ml-2 text-sm text-gray-700">Xuất bản ngay</span>
-            </label>
           </div>
 
           <div className="flex justify-end">
