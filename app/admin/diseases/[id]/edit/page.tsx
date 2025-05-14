@@ -17,42 +17,33 @@ export default function EditDisease({ params }: { params: Promise<{ id: string }
   const [disease, setDisease] = useState<Disease | null>(null);
   const [formData, setFormData] = useState<DiseaseUpdate>({
     label: '',
-    domain_id: '',
     description: '',
     included_in_diagnosis: true,
-    article_id: '',
   });
   
-  const [domains, setDomains] = useState<Domain[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
   useEffect(() => {
     const fetchData = async () => {
-      if (!token || !id) return;
+      if (!id) return;
       
       try {
-        // Fetch disease and domains in parallel
-        const [diseaseData, domainsData] = await Promise.all([
-          getDisease(id, token),
-          getDomains(token)
-        ]);
-        
+        // Fetch disease without requiring token
+        const diseaseData = await getDisease(id);
         setDisease(diseaseData);
-        setDomains(domainsData);
         
-        // Initialize form data
+        // Initialize form data with all available fields
+        // Note: domain_id and article_id are not included as they're not editable
         setFormData({
-          label: diseaseData.label,
-          domain_id: diseaseData.domain_id,
-          description: diseaseData.description,
-          included_in_diagnosis: diseaseData.included_in_diagnosis,
-          article_id: diseaseData.article_id,
+          label: diseaseData.label || '',
+          description: diseaseData.description || '',
+          included_in_diagnosis: diseaseData.included_in_diagnosis || false,
         });
       } catch (err) {
-        setError((err as Error).message || 'Không thể tải thông tin bệnh hoặc danh sách domain');
-        console.error('Error fetching data:', err);
+        console.error('Error fetching disease data:', err);
+        setError((err as Error).message || 'Không thể tải thông tin bệnh');
       } finally {
         setIsLoading(false);
       }
@@ -95,11 +86,11 @@ export default function EditDisease({ params }: { params: Promise<{ id: string }
     setIsSaving(true);
     setError(null);
     
-    // If domain_id is empty string, set it to null
+    // Send only editable fields in the update
     const dataToSubmit: DiseaseUpdate = {
-      ...formData,
-      domain_id: formData.domain_id || null,
-      article_id: formData.article_id || null,
+      label: formData.label,
+      description: formData.description || null,
+      included_in_diagnosis: formData.included_in_diagnosis,
     };
     
     try {
@@ -138,7 +129,7 @@ export default function EditDisease({ params }: { params: Promise<{ id: string }
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">Chỉnh sửa bệnh</h1>
+        <h1 className="text-2xl text-gray-700 font-bold">Chỉnh sửa bệnh</h1>
         <Link
           href="/admin/diseases"
           className="text-gray-600 hover:text-gray-900"
@@ -166,29 +157,18 @@ export default function EditDisease({ params }: { params: Promise<{ id: string }
                 name="label"
                 value={formData.label || ''}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full text-gray-700 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
                 required
               />
             </div>
             
             <div>
-              <label htmlFor="domain_id" className="block text-sm font-medium text-gray-700 mb-1">
-                Domain
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Domain <span className="text-xs text-gray-500">(Không thể chỉnh sửa)</span>
               </label>
-              <select
-                id="domain_id"
-                name="domain_id"
-                value={formData.domain_id || ''}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                <option value="">-- Chọn domain --</option>
-                {domains.map(domain => (
-                  <option key={domain.id} value={domain.id}>
-                    {domain.domain}
-                  </option>
-                ))}
-              </select>
+              <div className="px-4 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-700">
+                {disease?.domain?.domain || 'Không có domain'}
+              </div>
             </div>
             
             <div>
@@ -200,25 +180,21 @@ export default function EditDisease({ params }: { params: Promise<{ id: string }
                 name="description"
                 value={formData.description || ''}
                 onChange={handleChange}
-                rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                rows={8}
+                className="w-full text-gray-700 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
               ></textarea>
             </div>
             
-            <div>
-              <label htmlFor="article_id" className="block text-sm font-medium text-gray-700 mb-1">
-                ID bài viết
-              </label>
-              <input
-                type="text"
-                id="article_id"
-                name="article_id"
-                value={formData.article_id || ''}
-                onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
-                placeholder="Nhập ID bài viết (nếu có)"
-              />
-            </div>
+            {disease?.article_id && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  ID bài viết <span className="text-xs text-gray-500">(Không thể chỉnh sửa)</span>
+                </label>
+                <div className="px-4 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-700">
+                  {disease.article_id || 'Không có'}
+                </div>
+              </div>
+            )}
             
             <div className="flex items-center">
               <input
