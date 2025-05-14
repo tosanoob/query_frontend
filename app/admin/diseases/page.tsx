@@ -57,7 +57,7 @@ export default function DiseasesManagement() {
         <h1 className="text-3xl text-gray-700 font-bold">Quản lý Bệnh</h1>
         <Link 
           href="/admin/diseases/new" 
-          className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90"
+          className="bg-primary text-indigo-700 px-4 py-2 rounded-md hover:bg-primary/90"
         >
           Thêm bệnh mới
         </Link>

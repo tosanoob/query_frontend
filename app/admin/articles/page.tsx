@@ -73,7 +73,7 @@ export default function ArticlesPage() {
         <h1 className="text-3xl font-bold text-gray-700 text-primary">Quản lý Bài viết</h1>
         <Link
           href="/admin/articles/create"
-          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition-colors"
+          className="px-4 py-2 bg-primary text-indigo-700 rounded-md hover:bg-primary-dark transition-colors"
         >
           Tạo bài đăng mới
         </Link>

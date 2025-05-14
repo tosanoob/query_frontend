@@ -61,7 +61,7 @@ export default function ClinicsManagement() {
         <h1 className="text-3xl text-gray-700 font-bold">Quản lý Phòng khám</h1>
         <Link 
           href="/admin/clinics/new" 
-          className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary/90"
+          className="bg-primary text-indigo-700 px-4 py-2 rounded-md hover:bg-primary/90"
         >
           Thêm phòng khám mới
         </Link>
