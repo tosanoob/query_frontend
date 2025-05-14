@@ -5,11 +5,13 @@ import Link from 'next/link';
 import { useAuth } from '@/app/lib/context/AuthContext';
 import { Clinic, getClinic, deleteClinic } from '@/app/lib/api/clinic';
 import { useRouter } from 'next/navigation';
+import { use } from 'react';
 
-export default function ClinicDetail({ params }: { params: { id: string } }) {
+export default function ClinicDetail({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { token } = useAuth();
-  const { id } = params;
+  const resolvedParams = use(params);
+  const id = resolvedParams.id;
   
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +76,7 @@ export default function ClinicDetail({ params }: { params: { id: string } }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">{clinic?.name}</h1>
+        <h1 className="text-2xl text-gray-700 font-bold">{clinic?.name}</h1>
         <div className="flex space-x-3">
           <Link
             href="/admin/clinics"
@@ -94,33 +96,33 @@ export default function ClinicDetail({ params }: { params: { id: string } }) {
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
-            <h2 className="text-lg font-semibold mb-4">Thông tin chung</h2>
+            <h2 className="text-lg text-gray-700 font-semibold mb-4">Thông tin chung</h2>
             
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-gray-500">Tên phòng khám</p>
-                <p className="font-medium">{clinic?.name}</p>
+                <p className="text-gray-700 font-medium">{clinic?.name}</p>
               </div>
               
               <div>
                 <p className="text-sm text-gray-500">Mô tả</p>
-                <p>{clinic?.description || 'Không có mô tả'}</p>
+                <p className="text-gray-700">{clinic?.description || 'Không có mô tả'}</p>
               </div>
               
               <div>
                 <p className="text-sm text-gray-500">Địa chỉ</p>
-                <p>{clinic?.location || 'Không có thông tin'}</p>
+                <p className="text-gray-700">{clinic?.location || 'Không có thông tin'}</p>
               </div>
             </div>
           </div>
           
           <div>
-            <h2 className="text-lg font-semibold mb-4">Thông tin liên hệ</h2>
+            <h2 className="text-lg text-gray-700 font-semibold mb-4">Thông tin liên hệ</h2>
             
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-gray-500">Số điện thoại</p>
-                <p>{clinic?.phone_number || 'Không có thông tin'}</p>
+                <p className="text-gray-700">{clinic?.phone_number || 'Không có thông tin'}</p>
               </div>
               
               <div>
@@ -130,12 +132,12 @@ export default function ClinicDetail({ params }: { params: { id: string } }) {
                     href={clinic.website} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-primary hover:underline"
+                    className="text-primary text-gray-700 hover:underline"
                   >
                     {clinic.website}
                   </a>
                 ) : (
-                  <p>Không có thông tin</p>
+                  <p className="text-gray-700">Không có thông tin</p>
                 )}
               </div>
             </div>
@@ -143,22 +145,22 @@ export default function ClinicDetail({ params }: { params: { id: string } }) {
         </div>
         
         <div className="border-t border-gray-200 mt-8 pt-6">
-          <h2 className="text-lg font-semibold mb-4">Thông tin quản trị</h2>
+          <h2 className="text-lg text-gray-700 font-semibold mb-4">Thông tin quản trị</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <p className="text-sm text-gray-500">Ngày tạo</p>
-              <p>{clinic?.created_at ? new Date(clinic.created_at).toLocaleDateString('vi-VN') : 'N/A'}</p>
+              <p className="text-gray-700">{clinic?.created_at ? new Date(clinic.created_at).toLocaleDateString('vi-VN') : 'N/A'}</p>
             </div>
             
             <div>
               <p className="text-sm text-gray-500">Cập nhật lần cuối</p>
-              <p>{clinic?.updated_at ? new Date(clinic.updated_at).toLocaleDateString('vi-VN') : 'N/A'}</p>
+              <p className="text-gray-700">{clinic?.updated_at ? new Date(clinic.updated_at).toLocaleDateString('vi-VN') : 'N/A'}</p>
             </div>
             
             <div>
               <p className="text-sm text-gray-500">ID</p>
-              <p className="font-mono text-sm">{clinic?.id}</p>
+              <p className="text-gray-700 font-mono text-sm">{clinic?.id}</p>
             </div>
           </div>
         </div>

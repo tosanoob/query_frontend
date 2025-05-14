@@ -4,16 +4,16 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/app/lib/context/AuthContext';
 import { Disease, getDisease, deleteDisease } from '@/app/lib/api/disease';
-import { Domain, getDomain } from '@/app/lib/api/domain';
 import { useRouter } from 'next/navigation';
+import { use } from 'react';
 
-export default function DiseaseDetail({ params }: { params: { id: string } }) {
+export default function DiseaseDetail({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { token } = useAuth();
-  const { id } = params;
+  const resolvedParams = use(params);
+  const id = resolvedParams.id;
   
   const [disease, setDisease] = useState<Disease | null>(null);
-  const [domain, setDomain] = useState<Domain | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -25,16 +25,6 @@ export default function DiseaseDetail({ params }: { params: { id: string } }) {
       try {
         const diseaseData = await getDisease(id, token);
         setDisease(diseaseData);
-        
-        // If disease has a domain_id, fetch the domain details
-        if (diseaseData.domain_id) {
-          try {
-            const domainData = await getDomain(token, diseaseData.domain_id);
-            setDomain(domainData);
-          } catch (err) {
-            console.error('Error fetching domain:', err);
-          }
-        }
       } catch (err) {
         setError((err as Error).message || 'Không thể tải thông tin bệnh');
         console.error('Error fetching disease:', err);
@@ -86,7 +76,7 @@ export default function DiseaseDetail({ params }: { params: { id: string } }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">{disease?.label}</h1>
+        <h1 className="text-2xl text-gray-700 font-bold">{disease?.label}</h1>
         <div className="flex space-x-3">
           <Link
             href="/admin/diseases"
@@ -106,37 +96,37 @@ export default function DiseaseDetail({ params }: { params: { id: string } }) {
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
-            <h2 className="text-lg font-semibold mb-4">Thông tin chung</h2>
+            <h2 className="text-lg text-gray-700 font-semibold mb-4">Thông tin chung</h2>
             
             <div className="space-y-4">
               <div>
                 <p className="text-sm text-gray-500">Tên bệnh</p>
-                <p className="font-medium">{disease?.label}</p>
+                <p className="text-gray-700 font-medium">{disease?.label}</p>
               </div>
               
               <div>
                 <p className="text-sm text-gray-500">Mô tả</p>
-                <p>{disease?.description || 'Không có mô tả'}</p>
+                <p className="text-gray-700">{disease?.description || 'Không có mô tả'}</p>
               </div>
               
               <div>
                 <p className="text-sm text-gray-500">Domain</p>
-                {domain ? (
+                {disease?.domain ? (
                   <div>
-                    <p>{domain.domain}</p>
-                    {domain.description && (
-                      <p className="text-sm text-gray-500 mt-1">{domain.description}</p>
+                    <p className="text-gray-700">{disease.domain.domain}</p>
+                    {disease.domain.description && (
+                      <p className="text-gray-700 text-sm text-gray-500 mt-1">{disease.domain.description}</p>
                     )}
                   </div>
                 ) : (
-                  <p>Không có domain</p>
+                  <p className="text-gray-700">Không có domain</p>
                 )}
               </div>
             </div>
           </div>
           
           <div>
-            <h2 className="text-lg font-semibold mb-4">Thông tin thêm</h2>
+            <h2 className="text-lg text-gray-700 font-semibold mb-4">Thông tin thêm</h2>
             
             <div className="space-y-4">
               <div>
@@ -162,7 +152,7 @@ export default function DiseaseDetail({ params }: { params: { id: string } }) {
                     Xem bài viết (ID: {disease.article_id})
                   </Link>
                 ) : (
-                  <p>Không có bài viết liên quan</p>
+                  <p className="text-gray-700">Không có bài viết liên quan</p>
                 )}
               </div>
             </div>
@@ -170,22 +160,22 @@ export default function DiseaseDetail({ params }: { params: { id: string } }) {
         </div>
         
         <div className="border-t border-gray-200 mt-8 pt-6">
-          <h2 className="text-lg font-semibold mb-4">Thông tin quản trị</h2>
+          <h2 className="text-lg text-gray-700 font-semibold mb-4">Thông tin quản trị</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <p className="text-sm text-gray-500">Ngày tạo</p>
-              <p>{disease?.created_at ? new Date(disease.created_at).toLocaleDateString('vi-VN') : 'N/A'}</p>
+              <p className="text-gray-700">{disease?.created_at ? new Date(disease.created_at).toLocaleDateString('vi-VN') : 'N/A'}</p>
             </div>
             
             <div>
               <p className="text-sm text-gray-500">Cập nhật lần cuối</p>
-              <p>{disease?.updated_at ? new Date(disease.updated_at).toLocaleDateString('vi-VN') : 'N/A'}</p>
+              <p className="text-gray-700">{disease?.updated_at ? new Date(disease.updated_at).toLocaleDateString('vi-VN') : 'N/A'}</p>
             </div>
             
             <div>
               <p className="text-sm text-gray-500">ID</p>
-              <p className="font-mono text-sm">{disease?.id}</p>
+              <p className="text-gray-700 font-mono text-sm">{disease?.id}</p>
             </div>
           </div>
         </div>

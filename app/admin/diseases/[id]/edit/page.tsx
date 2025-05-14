@@ -6,11 +6,13 @@ import { useAuth } from '@/app/lib/context/AuthContext';
 import { Disease, DiseaseUpdate, getDisease, updateDisease } from '@/app/lib/api/disease';
 import { Domain, getDomains } from '@/app/lib/api/domain';
 import Link from 'next/link';
+import { use } from 'react';
 
-export default function EditDisease({ params }: { params: { id: string } }) {
+export default function EditDisease({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { token } = useAuth();
-  const { id } = params;
+  const resolvedParams = use(params);
+  const id = resolvedParams.id;
   
   const [disease, setDisease] = useState<Disease | null>(null);
   const [formData, setFormData] = useState<DiseaseUpdate>({

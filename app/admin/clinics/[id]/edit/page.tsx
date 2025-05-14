@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/lib/context/AuthContext';
 import { Clinic, ClinicUpdate, getClinic, updateClinic } from '@/app/lib/api/clinic';
 import Link from 'next/link';
+import { use } from 'react';
 
-export default function EditClinic({ params }: { params: { id: string } }) {
+export default function EditClinic({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { token } = useAuth();
-  const { id } = params;
+  const resolvedParams = use(params);
+  const id = resolvedParams.id;
   
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [formData, setFormData] = useState<ClinicUpdate>({
@@ -111,7 +113,7 @@ export default function EditClinic({ params }: { params: { id: string } }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">Chỉnh sửa phòng khám</h1>
+        <h1 className="text-2xl text-gray-700 font-bold">Chỉnh sửa phòng khám</h1>
         <Link
           href="/admin/clinics"
           className="text-gray-600 hover:text-gray-900"
@@ -139,7 +141,7 @@ export default function EditClinic({ params }: { params: { id: string } }) {
                 name="name"
                 value={formData.name || ''}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full text-gray-700 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
                 required
               />
             </div>
@@ -154,7 +156,7 @@ export default function EditClinic({ params }: { params: { id: string } }) {
                 value={formData.description || ''}
                 onChange={handleChange}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full text-gray-700 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
               ></textarea>
             </div>
             
@@ -168,7 +170,7 @@ export default function EditClinic({ params }: { params: { id: string } }) {
                 name="location"
                 value={formData.location || ''}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full text-gray-700 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
             
@@ -182,7 +184,7 @@ export default function EditClinic({ params }: { params: { id: string } }) {
                 name="phone_number"
                 value={formData.phone_number || ''}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full text-gray-700 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
             
@@ -196,7 +198,7 @@ export default function EditClinic({ params }: { params: { id: string } }) {
                 name="website"
                 value={formData.website || ''}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full text-gray-700 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="https://example.com"
               />
             </div>
