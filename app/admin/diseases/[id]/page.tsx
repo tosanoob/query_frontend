@@ -94,8 +94,8 @@ export default function DiseaseDetail({ params }: { params: Promise<{ id: string
       )}
       
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+          <div className="md:col-span-9">
             <h2 className="text-lg text-gray-700 font-semibold mb-4">Thông tin chung</h2>
             
             <div className="space-y-4">
@@ -125,7 +125,7 @@ export default function DiseaseDetail({ params }: { params: Promise<{ id: string
             </div>
           </div>
           
-          <div>
+          <div className="md:col-span-3">
             <h2 className="text-lg text-gray-700 font-semibold mb-4">Thông tin thêm</h2>
             
             <div className="space-y-4">

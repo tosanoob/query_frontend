@@ -142,7 +142,7 @@ export default function DiseasesManagement() {
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link
                         href={`/admin/diseases/${disease.id}`}
-                        className="text-primary hover:text-primary/80 mr-4"
+                        className="text-primary text-gray-400 hover:text-primary/80 mr-4"
                       >
                         Chi tiết
                       </Link>

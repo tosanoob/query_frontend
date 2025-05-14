@@ -9,8 +9,6 @@ import Link from 'next/link';
 export default function CreateArticlePage() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [author, setAuthor] = useState('');
-  const [slug, setSlug] = useState('');
   const [published, setPublished] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -18,15 +16,13 @@ export default function CreateArticlePage() {
   const { token, user } = useAuth();
   const router = useRouter();
 
-  const generateSlug = () => {
-    if (!title) return;
+  const generateSlug = (title: string) => {
+    if (!title) return '';
     
-    const slug = title
+    return title
       .toLowerCase()
       .replace(/[^\w\s]/gi, '')
       .replace(/\s+/g, '-');
-      
-    setSlug(slug);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,21 +38,18 @@ export default function CreateArticlePage() {
       return;
     }
     
-    if (!slug) {
-      generateSlug();
-    }
-    
     setIsLoading(true);
     setError(null);
     
     try {
+      const generatedSlug = generateSlug(title);
+      
       const articleData: ArticleCreate = {
         title,
         content,
-        author: author || null,
         created_by: user?.id,
         published,
-        slug: slug || undefined,
+        slug: generatedSlug,
       };
       
       await createArticle(token, articleData);
@@ -71,7 +64,7 @@ export default function CreateArticlePage() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Tạo Bài đăng Mới</h1>
+        <h1 className="text-3xl text-gray-700 font-bold">Tạo Bài đăng Mới</h1>
         <Link
           href="/admin/articles"
           className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
@@ -97,51 +90,9 @@ export default function CreateArticlePage() {
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              onBlur={generateSlug}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              className="w-full px-3 py-2 text-gray-700 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
               disabled={isLoading}
               required
-            />
-          </div>
-
-          <div className="mb-4">
-            <label htmlFor="slug" className="block text-sm font-medium text-gray-700 mb-1">
-              Slug
-            </label>
-            <div className="flex">
-              <input
-                type="text"
-                id="slug"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-                disabled={isLoading}
-              />
-              <button
-                type="button"
-                onClick={generateSlug}
-                className="px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-md hover:bg-gray-200"
-                disabled={isLoading || !title}
-              >
-                Tạo
-              </button>
-            </div>
-            <p className="mt-1 text-sm text-gray-500">
-              URL của bài viết, để trống sẽ tự động tạo từ tiêu đề
-            </p>
-          </div>
-
-          <div className="mb-4">
-            <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-1">
-              Tác giả
-            </label>
-            <input
-              type="text"
-              id="author"
-              value={author}
-              onChange={(e) => setAuthor(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
-              disabled={isLoading}
             />
           </div>
 
@@ -154,7 +105,7 @@ export default function CreateArticlePage() {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={15}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+              className="w-full px-3 py-2 text-gray-700 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
               disabled={isLoading}
               required
             ></textarea>
@@ -177,7 +128,7 @@ export default function CreateArticlePage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition-colors disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-indigo-500 rounded-md hover:bg-primary-dark transition-colors disabled:opacity-50"
             >
               {isLoading ? 'Đang xử lý...' : 'Tạo bài đăng'}
             </button>
