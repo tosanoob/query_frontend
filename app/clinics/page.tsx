@@ -1,85 +1,43 @@
-import { Suspense } from 'react';
+'use client';
+
+import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getClinics } from '../lib/api/clinic';
+import { getClinics, Clinic } from '../lib/api/clinic';
 import { getFullImageUrl } from '../lib/utils/constants';
 
-// Component để hiển thị danh sách phòng khám
-async function ClinicsList() {
-  try {
-    const clinics = await getClinics(0, 100);
-
-    if (!clinics.length) {
-      return (
-        <div className="text-center py-10">
-          <p className="text-gray-500">Không có dữ liệu phòng khám</p>
-        </div>
-      );
-    }
-
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {clinics.map((clinic) => (
-          <Link href={`/clinics/${clinic.id}`} key={clinic.id} className="block bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
-            <div className="relative h-48 w-full">
-              {clinic.images && clinic.images.length > 0 ? (
-                <Image 
-                  src={getFullImageUrl(
-                    clinic.images.find(img => img.usage === 'cover')?.image.base_url || clinic.images[0].image.base_url,
-                    clinic.images.find(img => img.usage === 'cover')?.image.rel_path || clinic.images[0].image.rel_path
-                  )}
-                  alt={clinic.name}
-                  fill
-                  style={{objectFit: "cover"}}
-                />
-              ) : (
-                <Image 
-                  src={`/placeholder-clinic.jpg`}
-                  alt={clinic.name}
-                  fill
-                  style={{objectFit: "cover"}}
-                />
-              )}
-            </div>
-            <div className="p-4">
-              <h3 className="text-lg font-semibold mb-2 text-gray-900">
-                {clinic.name}
-              </h3>
-              <p className="text-sm text-gray-600 mb-2">
-                {clinic.location 
-                  ? `Địa chỉ: ${clinic.location.length > 100 
-                      ? clinic.location.substring(0, 100) + '...' 
-                      : clinic.location}` 
-                  : 'Không có địa chỉ'}
-              </p>
-              {clinic.phone_number && (
-                <p className="text-sm text-gray-600 mb-2">
-                  <span className="font-medium">Điện thoại:</span> {clinic.phone_number}
-                </p>
-              )}
-              {clinic.website && (
-                <p className="text-sm text-gray-600">
-                  <span className="font-medium">Website:</span> {clinic.website.length > 100 
-                    ? clinic.website.substring(0, 100) + '...' 
-                    : clinic.website}
-                </p>
-              )}
-            </div>
-          </Link>
-        ))}
-      </div>
-    );
-  } catch (error) {
-    console.error('Error fetching clinics:', error);
-    return (
-      <div className="text-center py-10">
-        <p className="text-red-500">Không thể tải dữ liệu phòng khám</p>
-      </div>
-    );
-  }
-}
-
 export default function ClinicsPage() {
+  const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
+
+  const loadClinics = async (page = 1) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const skip = (page - 1) * 10;
+      const response = await getClinics(skip, 10);
+      setClinics(response.items);
+      setTotalPages(response.pagination.pages);
+      setHasNext(response.pagination.has_next);
+      setHasPrev(response.pagination.has_prev);
+      setCurrentPage(page);
+    } catch (err) {
+      console.error('Error loading clinics:', err);
+      setError((err as Error).message || 'Failed to load clinics');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadClinics(currentPage);
+  }, [currentPage]);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
@@ -116,7 +74,13 @@ export default function ClinicsPage() {
         </div>
       </div>
 
-      <Suspense fallback={
+      {error && (
+        <div className="text-center py-10">
+          <p className="text-red-500">{error}</p>
+        </div>
+      )}
+
+      {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map((item) => (
             <div key={item} className="bg-white rounded-lg overflow-hidden shadow-md animate-pulse">
@@ -129,9 +93,84 @@ export default function ClinicsPage() {
             </div>
           ))}
         </div>
-      }>
-        <ClinicsList />
-      </Suspense>
+      ) : (
+        <>
+          {clinics.length === 0 ? (
+            <div className="text-center py-10">
+              <p className="text-gray-500">Không có dữ liệu phòng khám</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {clinics.map((clinic) => (
+                <Link href={`/clinics/${clinic.id}`} key={clinic.id} className="block bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
+                  {clinic.images && clinic.images.length > 0 && (
+                    <div className="relative h-48 w-full">
+                      <Image 
+                        src={getFullImageUrl(
+                          clinic.images.find(img => img.usage === 'cover')?.image.base_url || clinic.images[0].image.base_url,
+                          clinic.images.find(img => img.usage === 'cover')?.image.rel_path || clinic.images[0].image.rel_path
+                        )}
+                        alt={clinic.name}
+                        fill
+                        style={{objectFit: "cover"}}
+                      />
+                    </div>
+                  )}
+                  <div className="p-4">
+                    <h3 className="text-lg font-semibold mb-2 text-gray-900">
+                      {clinic.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {clinic.location 
+                        ? `Địa chỉ: ${clinic.location.length > 100 
+                            ? clinic.location.substring(0, 100) + '...' 
+                            : clinic.location}` 
+                        : 'Không có địa chỉ'}
+                    </p>
+                    {clinic.phone_number && (
+                      <p className="text-sm text-gray-600 mb-2">
+                        <span className="font-medium">Điện thoại:</span> {clinic.phone_number}
+                      </p>
+                    )}
+                    {clinic.website && (
+                      <p className="text-sm text-gray-600">
+                        <span className="font-medium">Website:</span> {clinic.website.length > 100 
+                          ? clinic.website.substring(0, 100) + '...' 
+                          : clinic.website}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {/* Pagination controls */}
+          <div className="mt-8 flex justify-center items-center space-x-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={!hasPrev}
+              className={`px-4 py-2 rounded-md border ${
+                !hasPrev ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'hover:bg-gray-50'
+              }`}
+            >
+              Trang trước
+            </button>
+            <span className="text-sm text-gray-600">
+              Trang {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => prev + 1)}
+              disabled={!hasNext}
+              className={`px-4 py-2 rounded-md border ${
+                !hasNext ? 'opacity-50 cursor-not-allowed bg-gray-100' : 'hover:bg-gray-50'
+              }`}
+            >
+              Trang sau
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 } 

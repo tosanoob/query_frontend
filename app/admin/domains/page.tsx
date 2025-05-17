@@ -13,6 +13,10 @@ export default function DomainsManagement() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -22,8 +26,11 @@ export default function DomainsManagement() {
   const fetchDomains = async () => {
     setIsLoading(true);
     try {
-      const response = await getDomains(token || '');
-      setDomains(response);
+      const response = await getDomains(token || '', (currentPage - 1) * 10, 10);
+      setDomains(response.items);
+      setTotalPages(response.pagination.pages);
+      setHasNext(response.pagination.has_next);
+      setHasPrev(response.pagination.has_prev);
       setError(null);
     } catch (err) {
       setError((err as Error).message || 'Không thể tải danh sách domain');
@@ -37,7 +44,7 @@ export default function DomainsManagement() {
     if (token) {
       fetchDomains();
     }
-  }, [token]);
+  }, [token, currentPage]);
 
   const confirmDelete = (id: string) => {
     setDeleteId(id);
@@ -58,7 +65,7 @@ export default function DomainsManagement() {
   };
 
   return (
-    <div>
+    <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl text-gray-700 font-bold">Quản lý Domain</h1>
         <Link 
@@ -199,6 +206,27 @@ export default function DomainsManagement() {
           </div>
         </div>
       )}
+
+      {/* Add pagination controls */}
+      <div className="mt-4 flex justify-center items-center space-x-2">
+        <button
+          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+          disabled={!hasPrev}
+          className="px-3 py-1 rounded border disabled:opacity-50"
+        >
+          Previous
+        </button>
+        <span className="text-sm">
+          Page {currentPage} of {totalPages}
+        </span>
+        <button
+          onClick={() => setCurrentPage(prev => prev + 1)}
+          disabled={!hasNext}
+          className="px-3 py-1 rounded border disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 } 

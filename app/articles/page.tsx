@@ -12,22 +12,19 @@ export default function ArticlesListPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const itemsPerPage = 10;
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
 
   const loadArticles = async (page = 1) => {
     setIsLoading(true);
     setError(null);
     try {
-      const skip = (page - 1) * itemsPerPage;
-      const data = await getArticles(skip, itemsPerPage);
-      
-      console.log('Articles from API:', data);
-      
-      // Sử dụng toàn bộ dữ liệu thay vì lọc, vì có thể không có trường published
-      setArticles(data);
-      
-      // Lưu trữ số trang dựa trên số lượng bài viết
-      setTotalPages(Math.ceil(data.length > 0 ? Math.max(data.length, 10) / itemsPerPage : 1));
+      const skip = (page - 1) * 10;
+      const response = await getArticles(skip, 10);
+      setArticles(response.items);
+      setTotalPages(response.pagination.pages);
+      setHasNext(response.pagination.has_next);
+      setHasPrev(response.pagination.has_prev);
       setCurrentPage(page);
     } catch (err) {
       console.error('Error loading articles:', err);
@@ -123,29 +120,25 @@ export default function ArticlesListPage() {
             </div>
           )}
 
-          {totalPages > 1 && (
-            <div className="flex justify-center mt-12">
-              <nav className="flex items-center">
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 rounded-md mr-2 bg-white border border-gray-300 text-sm disabled:opacity-50"
-                >
-                  Trước
-                </button>
-                <span className="px-4 py-1 text-sm text-gray-700">
-                  Trang {currentPage} / {totalPages}
-                </span>
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 rounded-md ml-2 bg-white border border-gray-300 text-sm disabled:opacity-50"
-                >
-                  Sau
-                </button>
-              </nav>
-            </div>
-          )}
+          <div className="mt-4 flex justify-center items-center space-x-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={!hasPrev}
+              className="px-3 py-1 rounded border disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => prev + 1)}
+              disabled={!hasNext}
+              className="px-3 py-1 rounded border disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
         </>
       )}
     </div>

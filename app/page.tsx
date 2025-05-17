@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { getDiseases } from './lib/api/disease';
-import { getArticles } from './lib/api/article';
-import { getClinics } from './lib/api/clinic';
+import { getDiseases, Disease } from './lib/api/disease';
+import { getArticles, Article } from './lib/api/article';
+import { getClinics, Clinic } from './lib/api/clinic';
 import { Suspense } from 'react';
 import { getFullImageUrl } from './lib/utils/constants';
 
@@ -10,12 +10,13 @@ import { getFullImageUrl } from './lib/utils/constants';
 async function DiseasesList() {
   // Lấy dữ liệu bệnh từ API
   try {
-    const diseases = await getDiseases(0, 4);
+    const response = await getDiseases(0, 4);
+    const diseases = response.items;
     
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {diseases.length > 0 ? (
-          diseases.map((disease) => (
+          diseases.map((disease: Disease) => (
             <Link href={`/diseases/${disease.id}`} key={disease.id} className="group block bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
               {/* <div className="relative h-48 w-full">
                 {disease.images && disease.images.length > 0 ? (
@@ -72,19 +73,20 @@ async function DiseasesList() {
 async function ClinicsList() {
   // Lấy dữ liệu phòng khám từ API
   try {
-    const clinics = await getClinics(0, 3);
+    const response = await getClinics(0, 3);
+    const clinics = response.items;
     
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {clinics.length > 0 ? (
-          clinics.map((clinic) => (
+          clinics.map((clinic: Clinic) => (
             <Link href={`/clinics/${clinic.id}`} key={clinic.id} className="block bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow">
               <div className="relative h-40 w-full">
                 {clinic.images && clinic.images.length > 0 ? (
                   <Image 
                     src={getFullImageUrl(
-                      clinic.images.find(img => img.usage === 'cover')?.image.base_url || clinic.images[0].image.base_url,
-                      clinic.images.find(img => img.usage === 'cover')?.image.rel_path || clinic.images[0].image.rel_path
+                      clinic.images.find((img: { usage: string }) => img.usage === 'cover')?.image.base_url || clinic.images[0].image.base_url,
+                      clinic.images.find((img: { usage: string }) => img.usage === 'cover')?.image.rel_path || clinic.images[0].image.rel_path
                     )}
                     alt={clinic.name}
                     fill
@@ -141,12 +143,13 @@ export default async function Home() {
   let diagnosisImage = '/placeholder-ai.jpg';
   
   try {
-    const articles = await getArticles(0, 5);
+    const response = await getArticles(0, 5);
+    const articles = response.items;
     
     // Find an article with cover image for hero section
-    const heroArticle = articles.find(article => 
+    const heroArticle = articles.find((article: Article) => 
       article.images && article.images.length > 0 && 
-      article.images.some(img => img.usage === 'cover')
+      article.images.some((img: { usage: string }) => img.usage === 'cover')
     );
     
     if (heroArticle && heroArticle.images) {

@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '@/app/lib/utils/constants';
+import { PaginatedResponse } from './types';
 
 interface ClinicImage {
   id: string;
@@ -50,9 +51,9 @@ export interface ClinicUpdate {
 
 export async function getClinics(
   skip = 0, 
-  limit = 100, 
+  limit = 10, 
   search?: string | null
-): Promise<Clinic[]> {
+): Promise<PaginatedResponse<Clinic>> {
   let url = `${API_BASE_URL}/api/clinic/?skip=${skip}&limit=${limit}`;
   
   if (search) {

@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '@/app/lib/utils/constants';
+import { PaginatedResponse } from './types';
 
 export interface Domain {
   id: string;
@@ -27,8 +28,8 @@ export interface DomainUpdate {
 export async function getDomains(
   token: string, 
   skip = 0, 
-  limit = 100
-): Promise<Domain[]> {
+  limit = 10
+): Promise<PaginatedResponse<Domain>> {
   const response = await fetch(
     `${API_BASE_URL}/api/domains/?skip=${skip}&limit=${limit}`,
     {

@@ -14,6 +14,11 @@ export default function ClinicsManagement() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
+  const [totalItems, setTotalItems] = useState(0);
 
   useEffect(() => {
     setIsMounted(true);
@@ -23,8 +28,15 @@ export default function ClinicsManagement() {
   const fetchClinics = async () => {
     setIsLoading(true);
     try {
-      const response = await getClinics(0, 100, searchTerm || null);
-      setClinics(response);
+      const skip = (currentPage - 1) * 10;
+      const response = await getClinics(skip, 10, searchTerm || null);
+      if (response && response.items) {
+        setClinics(response.items);
+        setTotalPages(response.pagination.pages);
+        setTotalItems(response.pagination.total);
+        setHasNext(response.pagination.has_next);
+        setHasPrev(response.pagination.has_prev);
+      }
       setError(null);
     } catch (err) {
       setError((err as Error).message || 'Không thể tải danh sách phòng khám');
@@ -34,12 +46,16 @@ export default function ClinicsManagement() {
     }
   };
 
+  // Fetch clinics when currentPage changes or when component mounts
   useEffect(() => {
-    fetchClinics();
-  }, []);
+    if (isMounted) {
+      fetchClinics();
+    }
+  }, [currentPage, isMounted]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    setCurrentPage(1); // Reset to first page when searching
     fetchClinics();
   };
 
@@ -101,87 +117,112 @@ export default function ClinicsManagement() {
           <p>Đang tải...</p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Tên
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Địa chỉ
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Liên hệ
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Thao tác
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {clinics.length === 0 ? (
+        <>
+          <div className="bg-white rounded-lg shadow overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
                 <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-gray-700">
-                    Không tìm thấy phòng khám nào
-                  </td>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Tên
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Địa chỉ
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Liên hệ
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
+                    Thao tác
+                  </th>
                 </tr>
-              ) : (
-                clinics.map((clinic) => (
-                  <tr key={clinic.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{clinic.name}</div>
-                      {clinic.description && (
-                        <div className="text-sm text-gray-700 truncate max-w-xs">
-                          {clinic.description}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {clinic.location || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      <div>{clinic.phone_number || 'N/A'}</div>
-                      {clinic.website && (
-                        <a 
-                          href={clinic.website} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline"
-                        >
-                          {clinic.website}
-                        </a>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <Link
-                        href={`/admin/clinics/${clinic.id}`}
-                        className="text-primary text-gray-700 hover:text-primary/80 mr-4"
-                      >
-                        Chi tiết
-                      </Link>
-                      <Link
-                        href={`/admin/clinics/${clinic.id}/edit`}
-                        className="text-indigo-600 hover:text-indigo-900 mr-4"
-                      >
-                        Sửa
-                      </Link>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          confirmDelete(clinic.id);
-                        }}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Xóa
-                      </button>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {clinics.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-4 text-center text-gray-700">
+                      Không tìm thấy phòng khám nào
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  clinics.map((clinic) => (
+                    <tr key={clinic.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-medium text-gray-900">{clinic.name}</div>
+                        {clinic.description && (
+                          <div className="text-sm text-gray-700 truncate max-w-xs">
+                            {clinic.description}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        {clinic.location || 'N/A'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        <div>{clinic.phone_number || 'N/A'}</div>
+                        {clinic.website && (
+                          <a 
+                            href={clinic.website} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline"
+                          >
+                            {clinic.website}
+                          </a>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <Link
+                          href={`/admin/clinics/${clinic.id}`}
+                          className="text-primary text-gray-700 hover:text-primary/80 mr-4"
+                        >
+                          Chi tiết
+                        </Link>
+                        <Link
+                          href={`/admin/clinics/${clinic.id}/edit`}
+                          className="text-indigo-600 hover:text-indigo-900 mr-4"
+                        >
+                          Sửa
+                        </Link>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            confirmDelete(clinic.id);
+                          }}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Xóa
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination controls */}
+          {(
+            <div className="mt-4 flex justify-center items-center space-x-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={!hasPrev}
+                className="px-3 py-1 rounded border disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                disabled={!hasNext}
+                className="px-3 py-1 rounded border disabled:opacity-50"
+              >
+                Next
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Delete Confirmation Modal */}

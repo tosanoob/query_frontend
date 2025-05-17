@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '@/app/lib/utils/constants';
+import { PaginatedResponse } from './types';
 
 interface ArticleImage {
   id: string;
@@ -62,7 +63,7 @@ export async function getArticles(
   skip = 0, 
   limit = 10,
   token?: string
-): Promise<Article[]> {
+): Promise<PaginatedResponse<Article>> {
   const headers: Record<string, string> = {
     'ngrok-skip-browser-warning': '1'
   };
@@ -70,13 +71,11 @@ export async function getArticles(
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  console.log(`${API_BASE_URL}/api/article/?skip=${skip}&limit=${limit}`);
+  
   const response = await fetch(
     `${API_BASE_URL}/api/article/?skip=${skip}&limit=${limit}`,
     { headers }
   );
-  console.log('Response status:', response.status);
-  console.log('Response type:', response.headers.get('content-type'));
 
   if (!response.ok) {
     const error = await response.json();

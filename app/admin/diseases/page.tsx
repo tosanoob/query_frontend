@@ -14,17 +14,24 @@ export default function DiseasesManagement() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
     return () => setIsMounted(false);
   }, []);
 
-  const fetchDiseases = async ( active_only: boolean = false ) => {
+  const fetchDiseases = async (active_only: boolean = false) => {
     setIsLoading(true);
     try {
-      const response = await getDiseases(0, 100, token || undefined, active_only);
-      setDiseases(response);
+      const response = await getDiseases((currentPage - 1) * 10, 10, token || undefined, active_only);
+      setDiseases(response.items);
+      setTotalPages(response.pagination.pages);
+      setHasNext(response.pagination.has_next);
+      setHasPrev(response.pagination.has_prev);
       setError(null);
     } catch (err) {
       setError((err as Error).message || 'Không thể tải danh sách bệnh');
@@ -38,7 +45,7 @@ export default function DiseasesManagement() {
     if (token) {
       fetchDiseases();
     }
-  }, [token]);
+  }, [token, currentPage]);
 
   const confirmDelete = (id: string) => {
     setDeleteId(id);
@@ -59,7 +66,7 @@ export default function DiseasesManagement() {
   };
 
   return (
-    <div>
+    <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl text-gray-700 font-bold">Quản lý Bệnh</h1>
         <Link 
@@ -226,6 +233,27 @@ export default function DiseasesManagement() {
           </div>
         </div>
       )}
+
+      {/* Add pagination controls */}
+      <div className="mt-4 flex justify-center items-center space-x-2">
+        <button
+          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+          disabled={!hasPrev}
+          className="px-3 py-1 rounded border disabled:opacity-50"
+        >
+          Previous
+        </button>
+        <span className="text-sm">
+          Page {currentPage} of {totalPages}
+        </span>
+        <button
+          onClick={() => setCurrentPage(prev => prev + 1)}
+          disabled={!hasNext}
+          className="px-3 py-1 rounded border disabled:opacity-50"
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 } 

@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '@/app/lib/utils/constants';
+import { PaginatedResponse } from './types';
 
 interface DiseaseImage {
   id: string;
@@ -63,10 +64,10 @@ export interface DiseaseUpdate {
 
 export async function getDiseases(
   skip = 0, 
-  limit = 100,
+  limit = 10,
   token?: string,
   active_only: boolean = true
-): Promise<Disease[]> {
+): Promise<PaginatedResponse<Disease>> {
   const headers: Record<string, string> = {
     'ngrok-skip-browser-warning': '1'
   };
