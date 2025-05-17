@@ -92,7 +92,7 @@ export default function NewDisease() {
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">Thêm bệnh mới</h1>
+        <h1 className="text-2xl text-gray-900 font-bold">Thêm bệnh mới</h1>
         <Link
           href="/admin/diseases"
           className="text-gray-600 hover:text-gray-900"
@@ -120,7 +120,7 @@ export default function NewDisease() {
                 name="label"
                 value={formData.label}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 text-gray-900 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
                 required
               />
             </div>
@@ -134,7 +134,7 @@ export default function NewDisease() {
                 name="domain_id"
                 value={formData.domain_id || ''}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 text-gray-900 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 <option value="">-- Chọn domain --</option>
                 {isLoadingDomains ? (
@@ -147,6 +147,11 @@ export default function NewDisease() {
                   ))
                 )}
               </select>
+              {!isLoadingDomains && domains.length === 0 && (
+                <p className="mt-1 text-sm text-red-500">
+                  Không có domain nào. Vui lòng <Link href="/admin/domains/new" className="underline">tạo domain</Link> trước.
+                </p>
+              )}
             </div>
             
             <div>
@@ -159,7 +164,7 @@ export default function NewDisease() {
                 value={formData.description || ''}
                 onChange={handleChange}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 text-gray-900 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
               ></textarea>
             </div>
             
@@ -203,7 +208,7 @@ export default function NewDisease() {
             <button
               type="submit"
               disabled={isLoading}
-              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-gray-900 rounded-md hover:bg-primary/90 disabled:opacity-50"
             >
               {isLoading ? 'Đang xử lý...' : 'Lưu bệnh'}
             </button>

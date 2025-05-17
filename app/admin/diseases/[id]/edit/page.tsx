@@ -15,9 +15,13 @@ export default function EditDisease({ params }: { params: Promise<{ id: string }
   const id = resolvedParams.id;
   
   const [disease, setDisease] = useState<Disease | null>(null);
+  const [domains, setDomains] = useState<Domain[]>([]);
+  const [isLoadingDomains, setIsLoadingDomains] = useState(true);
+  
   const [formData, setFormData] = useState<DiseaseUpdate>({
     label: '',
     description: '',
+    domain_id: '',
     included_in_diagnosis: true,
   });
   
@@ -25,6 +29,26 @@ export default function EditDisease({ params }: { params: Promise<{ id: string }
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
+  // Fetch domains
+  useEffect(() => {
+    const fetchDomains = async () => {
+      if (!token) return;
+      
+      setIsLoadingDomains(true);
+      try {
+        const domainsData = await getDomains(token);
+        setDomains(domainsData);
+      } catch (err) {
+        console.error('Error fetching domains:', err);
+      } finally {
+        setIsLoadingDomains(false);
+      }
+    };
+    
+    fetchDomains();
+  }, [token]);
+  
+  // Fetch disease data
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
@@ -35,10 +59,10 @@ export default function EditDisease({ params }: { params: Promise<{ id: string }
         setDisease(diseaseData);
         
         // Initialize form data with all available fields
-        // Note: domain_id and article_id are not included as they're not editable
         setFormData({
           label: diseaseData.label || '',
           description: diseaseData.description || '',
+          domain_id: diseaseData.domain_id || '',
           included_in_diagnosis: diseaseData.included_in_diagnosis || false,
         });
       } catch (err) {
@@ -86,10 +110,11 @@ export default function EditDisease({ params }: { params: Promise<{ id: string }
     setIsSaving(true);
     setError(null);
     
-    // Send only editable fields in the update
+    // Prepare data to submit
     const dataToSubmit: DiseaseUpdate = {
       label: formData.label,
       description: formData.description || null,
+      domain_id: formData.domain_id || null,
       included_in_diagnosis: formData.included_in_diagnosis,
     };
     
@@ -163,12 +188,32 @@ export default function EditDisease({ params }: { params: Promise<{ id: string }
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Domain <span className="text-xs text-gray-500">(Không thể chỉnh sửa)</span>
+              <label htmlFor="domain_id" className="block text-sm font-medium text-gray-700 mb-1">
+                Domain
               </label>
-              <div className="px-4 py-2 bg-gray-50 border border-gray-300 rounded-md text-gray-700">
-                {disease?.domain?.domain || 'Không có domain'}
-              </div>
+              <select
+                id="domain_id"
+                name="domain_id"
+                value={formData.domain_id || ''}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+              >
+                <option value="">-- Chọn domain --</option>
+                {isLoadingDomains ? (
+                  <option disabled>Đang tải...</option>
+                ) : (
+                  domains.map(domain => (
+                    <option key={domain.id} value={domain.id}>
+                      {domain.domain}
+                    </option>
+                  ))
+                )}
+              </select>
+              {!isLoadingDomains && domains.length === 0 && (
+                <p className="mt-1 text-sm text-red-500">
+                  Không có domain nào. Vui lòng <Link href="/admin/domains/new" className="underline">tạo domain</Link> trước.
+                </p>
+              )}
             </div>
             
             <div>

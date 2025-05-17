@@ -30,7 +30,7 @@ export async function getDomains(
   limit = 100
 ): Promise<Domain[]> {
   const response = await fetch(
-    `${API_BASE_URL}/api/domain/?skip=${skip}&limit=${limit}`,
+    `${API_BASE_URL}/api/domains/?skip=${skip}&limit=${limit}`,
     {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -49,7 +49,7 @@ export async function getDomains(
 
 export async function getDomain(token: string, domainId: string): Promise<Domain> {
   const response = await fetch(
-    `${API_BASE_URL}/api/domain/${domainId}`,
+    `${API_BASE_URL}/api/domains/${domainId}`,
     {
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -71,7 +71,7 @@ export async function createDomain(
   domainData: DomainCreate
 ): Promise<Domain> {
   const response = await fetch(
-    `${API_BASE_URL}/api/domain/`,
+    `${API_BASE_URL}/api/domains/`,
     {
       method: 'POST',
       headers: {
@@ -97,7 +97,7 @@ export async function updateDomain(
   domainData: DomainUpdate
 ): Promise<Domain> {
   const response = await fetch(
-    `${API_BASE_URL}/api/domain/${domainId}`,
+    `${API_BASE_URL}/api/domains/${domainId}`,
     {
       method: 'PUT',
       headers: {
@@ -123,7 +123,7 @@ export async function deleteDomain(
   softDelete = true
 ): Promise<any> {
   const response = await fetch(
-    `${API_BASE_URL}/api/domain/${domainId}?soft_delete=${softDelete}`,
+    `${API_BASE_URL}/api/domains/${domainId}?soft_delete=${softDelete}`,
     {
       method: 'DELETE',
       headers: {

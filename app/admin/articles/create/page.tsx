@@ -65,7 +65,7 @@ export default function CreateArticlePage() {
         <h1 className="text-3xl text-gray-700 font-bold">Tạo Bài đăng Mới</h1>
         <Link
           href="/admin/articles"
-          className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+          className="px-4 py-2 border text-gray-900 border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
         >
           Trở về
         </Link>

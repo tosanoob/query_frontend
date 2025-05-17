@@ -64,7 +64,8 @@ export interface DiseaseUpdate {
 export async function getDiseases(
   skip = 0, 
   limit = 100,
-  token?: string
+  token?: string,
+  active_only: boolean = true
 ): Promise<Disease[]> {
   const headers: Record<string, string> = {
     'ngrok-skip-browser-warning': '1'
@@ -75,7 +76,7 @@ export async function getDiseases(
   }
   
   const response = await fetch(
-    `${API_BASE_URL}/api/diseases/?skip=${skip}&limit=${limit}`,
+    `${API_BASE_URL}/api/diseases/?skip=${skip}&limit=${limit}&active_only=${active_only}`,
     { headers }
   );
 

@@ -56,7 +56,7 @@ export default function NewClinic() {
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold">Thêm phòng khám mới</h1>
+        <h1 className="text-2xl text-gray-900 font-bold">Thêm phòng khám mới</h1>
         <Link
           href="/admin/clinics"
           className="text-gray-600 hover:text-gray-900"
@@ -84,7 +84,7 @@ export default function NewClinic() {
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 text-gray-900 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
                 required
               />
             </div>
@@ -99,7 +99,7 @@ export default function NewClinic() {
                 value={formData.description || ''}
                 onChange={handleChange}
                 rows={4}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 text-gray-900 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
               ></textarea>
             </div>
             
@@ -113,7 +113,7 @@ export default function NewClinic() {
                 name="location"
                 value={formData.location || ''}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 text-gray-900 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
             
@@ -127,7 +127,7 @@ export default function NewClinic() {
                 name="phone_number"
                 value={formData.phone_number || ''}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 text-gray-900 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
             </div>
             
@@ -141,7 +141,7 @@ export default function NewClinic() {
                 name="website"
                 value={formData.website || ''}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-4 text-gray-900 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary/50"
                 placeholder="https://example.com"
               />
             </div>
@@ -157,7 +157,7 @@ export default function NewClinic() {
             <button
               type="submit"
               disabled={isLoading}
-              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90 disabled:opacity-50"
+              className="px-4 py-2 bg-primary text-gray-900 rounded-md hover:bg-primary/90 disabled:opacity-50"
             >
               {isLoading ? 'Đang xử lý...' : 'Lưu phòng khám'}
             </button>

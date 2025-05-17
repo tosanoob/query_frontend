@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/lib/context/AuthContext';
-import { Disease, getDiseases, deleteDisease } from '@/app/lib/api/disease';
+import { Domain, getDomains, deleteDomain } from '@/app/lib/api/domain';
 import Link from 'next/link';
-import { createPortal } from 'react-dom';
 
-export default function DiseasesManagement() {
+export default function DomainsManagement() {
   const { token } = useAuth();
-  const [diseases, setDiseases] = useState<Disease[]>([]);
+  const [domains, setDomains] = useState<Domain[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -20,15 +19,15 @@ export default function DiseasesManagement() {
     return () => setIsMounted(false);
   }, []);
 
-  const fetchDiseases = async ( active_only: boolean = false ) => {
+  const fetchDomains = async () => {
     setIsLoading(true);
     try {
-      const response = await getDiseases(0, 100, token || undefined, active_only);
-      setDiseases(response);
+      const response = await getDomains(token || '');
+      setDomains(response);
       setError(null);
     } catch (err) {
-      setError((err as Error).message || 'Không thể tải danh sách bệnh');
-      console.error('Error fetching diseases:', err);
+      setError((err as Error).message || 'Không thể tải danh sách domain');
+      console.error('Error fetching domains:', err);
     } finally {
       setIsLoading(false);
     }
@@ -36,7 +35,7 @@ export default function DiseasesManagement() {
 
   useEffect(() => {
     if (token) {
-      fetchDiseases();
+      fetchDomains();
     }
   }, [token]);
 
@@ -49,24 +48,24 @@ export default function DiseasesManagement() {
     if (!deleteId || !token) return;
     
     try {
-      await deleteDisease(token, deleteId);
+      await deleteDomain(token, deleteId);
       setShowDeleteModal(false);
       setDeleteId(null);
-      fetchDiseases(); // Refresh list
+      fetchDomains(); // Refresh list
     } catch (err) {
-      setError((err as Error).message || 'Lỗi khi xóa bệnh');
+      setError((err as Error).message || 'Lỗi khi xóa domain');
     }
   };
 
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl text-gray-700 font-bold">Quản lý Bệnh</h1>
+        <h1 className="text-3xl text-gray-700 font-bold">Quản lý Domain</h1>
         <Link 
-          href="/admin/diseases/new" 
+          href="/admin/domains/new" 
           className="bg-primary text-indigo-700 px-4 py-2 rounded-md hover:bg-primary/90"
         >
-          Thêm bệnh mới
+          Thêm domain mới
         </Link>
       </div>
 
@@ -86,16 +85,13 @@ export default function DiseasesManagement() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Tên bệnh
+                  Tên Domain
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Domain
+                  Mô tả
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Bài viết
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Chẩn đoán
+                  Ngày tạo
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Thao tác
@@ -103,58 +99,35 @@ export default function DiseasesManagement() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {diseases.length === 0 ? (
+              {domains.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-700">
-                    Không tìm thấy bệnh nào
+                  <td colSpan={4} className="px-6 py-4 text-center text-gray-700">
+                    Không tìm thấy domain nào
                   </td>
                 </tr>
               ) : (
-                diseases.map((disease) => (
-                  <tr key={disease.id}>
+                domains.map((domain) => (
+                  <tr key={domain.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{disease.label}</div>
-                      {disease.description && (
-                        <div className="text-sm text-gray-700 truncate max-w-xs">
-                          {disease.description}
-                        </div>
-                      )}
+                      <div className="font-medium text-gray-900">{domain.domain}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {disease.domain?.domain || 'N/A'}
+                      {domain.description || 'Không có mô tả'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {disease.article_id ? (
-                        <Link
-                          href={`/admin/articles/${disease.article_id}`}
-                          className="text-primary hover:underline"
-                        >
-                          Xem bài viết
-                        </Link>
-                      ) : (
-                        'Không có'
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          disease.included_in_diagnosis
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {disease.included_in_diagnosis ? 'Bật' : 'Tắt'}
-                      </span>
+                      {domain.created_at 
+                        ? new Date(domain.created_at).toLocaleDateString('vi-VN') 
+                        : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link
-                        href={`/admin/diseases/${disease.id}`}
+                        href={`/admin/domains/${domain.id}`}
                         className="text-primary text-gray-400 hover:text-primary/80 mr-4"
                       >
                         Chi tiết
                       </Link>
                       <Link
-                        href={`/admin/diseases/${disease.id}/edit`}
+                        href={`/admin/domains/${domain.id}/edit`}
                         className="text-indigo-600 hover:text-indigo-900 mr-4"
                       >
                         Sửa
@@ -162,7 +135,7 @@ export default function DiseasesManagement() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          confirmDelete(disease.id);
+                          confirmDelete(domain.id);
                         }}
                         className="text-red-600 hover:text-red-900"
                       >
@@ -198,7 +171,7 @@ export default function DiseasesManagement() {
                   </h3>
                   <div className="mt-2">
                     <p className="text-sm text-gray-700">
-                      Bạn có chắc chắn muốn xóa bệnh này? Hành động này không thể hoàn tác.
+                      Bạn có chắc chắn muốn xóa domain này? Hành động này không thể hoàn tác.
                     </p>
                   </div>
                 </div>
