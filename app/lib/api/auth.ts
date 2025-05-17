@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '@/app/lib/utils/constants';
+import { apiClient } from './apiClient';
 
 export interface LoginRequest {
   username: string;
@@ -15,37 +16,9 @@ export interface TokenResponse {
 }
 
 export async function login(credentials: LoginRequest): Promise<TokenResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': '1'
-    },
-    body: JSON.stringify(credentials),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to login');
-  }
-
-  return response.json();
+  return apiClient.post<TokenResponse>('/api/auth/login', credentials);
 }
 
 export async function logout(token: string): Promise<{ success: boolean; message: string }> {
-  const response = await fetch(`${API_BASE_URL}/api/auth/logout`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'ngrok-skip-browser-warning': '1'
-    },
-    body: JSON.stringify({ token }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to logout');
-  }
-
-  return response.json();
+  return apiClient.post<{ success: boolean; message: string }>('/api/auth/logout', { token }, { token });
 } 

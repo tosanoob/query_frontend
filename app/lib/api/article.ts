@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '@/app/lib/utils/constants';
 import { PaginatedResponse } from './types';
+import { apiClient } from './apiClient';
 
 interface ArticleImage {
   id: string;
@@ -64,133 +65,49 @@ export async function getArticles(
   limit = 10,
   token?: string
 ): Promise<PaginatedResponse<Article>> {
-  const headers: Record<string, string> = {
-    'ngrok-skip-browser-warning': '1'
-  };
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  const response = await fetch(
-    `${API_BASE_URL}/api/article/?skip=${skip}&limit=${limit}`,
-    { headers }
+  return apiClient.get<PaginatedResponse<Article>>(
+    `/api/article/?skip=${skip}&limit=${limit}`,
+    { token }
   );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to fetch articles');
-  }
-  return response.json();
 }
 
 export async function getArticle(
   articleId: string,
   token?: string
 ): Promise<Article> {
-  const headers: Record<string, string> = {
-    'ngrok-skip-browser-warning': '1'
-  };
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
   console.log(`Fetching article by ID: ${articleId}`);
-  console.log(`URL: ${API_BASE_URL}/api/article/${articleId}`);
   
-  const response = await fetch(
-    `${API_BASE_URL}/api/article/${articleId}`,
-    { headers }
-  );
-
-  console.log('Response status:', response.status);
-  console.log('Response type:', response.headers.get('content-type'));
-  
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('Article not found');
-    }
-    
-    try {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to fetch article');
-    } catch (err) {
-      console.error('Error parsing error response:', err);
-      throw new Error(`Failed to fetch article: ${response.statusText}`);
-    }
+  try {
+    const data = await apiClient.get<Article>(`/api/article/${articleId}`, { token });
+    console.log('Article data from ID:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching article:', error);
+    throw error;
   }
-
-  const data = await response.json();
-  console.log('Article data from ID:', data);
-  return data;
 }
 
 export async function getArticleBySlug(
   slug: string,
   token?: string
 ): Promise<Article> {
-  const headers: Record<string, string> = {
-    'ngrok-skip-browser-warning': '1'
-  };
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
   console.log(`Fetching article by slug: ${slug}`);
-  console.log(`URL: ${API_BASE_URL}/api/article/slug/${slug}`);
   
-  const response = await fetch(
-    `${API_BASE_URL}/api/article/slug/${slug}`,
-    { headers }
-  );
-
-  console.log('Response status:', response.status);
-  console.log('Response type:', response.headers.get('content-type'));
-  
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('Article not found');
-    }
-    
-    try {
-      const error = await response.json();
-      throw new Error(error.detail || 'Failed to fetch article');
-    } catch (err) {
-      console.error('Error parsing error response:', err);
-      throw new Error(`Failed to fetch article: ${response.statusText}`);
-    }
+  try {
+    const data = await apiClient.get<Article>(`/api/article/slug/${slug}`, { token });
+    console.log('Article data from slug:', data);
+    return data;
+  } catch (error) {
+    console.error('Error fetching article by slug:', error);
+    throw error;
   }
-
-  const data = await response.json();
-  console.log('Article data from slug:', data);
-  return data;
 }
 
 export async function createArticle(
   token: string, 
   articleData: ArticleCreate
 ): Promise<Article> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/article/`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'ngrok-skip-browser-warning': '1'
-      },
-      body: JSON.stringify(articleData)
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to create article');
-  }
-
-  return response.json();
+  return apiClient.post<Article>('/api/article/', articleData, { token });
 }
 
 export async function updateArticle(
@@ -198,25 +115,7 @@ export async function updateArticle(
   articleId: string, 
   articleData: ArticleUpdate
 ): Promise<Article> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/article/${articleId}`,
-    {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'ngrok-skip-browser-warning': '1'
-      },
-      body: JSON.stringify(articleData)
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to update article');
-  }
-
-  return response.json();
+  return apiClient.put<Article>(`/api/article/${articleId}`, articleData, { token });
 }
 
 export async function deleteArticle(
@@ -224,21 +123,8 @@ export async function deleteArticle(
   articleId: string, 
   softDelete = true
 ): Promise<any> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/article/${articleId}?soft_delete=${softDelete}`,
-    {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'ngrok-skip-browser-warning': '1'
-      }
-    }
+  return apiClient.delete<any>(
+    `/api/article/${articleId}?soft_delete=${softDelete}`,
+    { token }
   );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to delete article');
-  }
-
-  return response.json();
 } 

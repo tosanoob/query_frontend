@@ -206,19 +206,19 @@ export default function ClinicsManagement() {
               <button
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={!hasPrev}
-                className="px-3 py-1 rounded border disabled:opacity-50"
+                className="px-3 py-1 text-gray-800 rounded border disabled:opacity-50"
               >
-                Previous
+                Trước
               </button>
-              <span className="text-sm">
-                Page {currentPage} of {totalPages}
+              <span className="text-gray-800 text-sm">
+                Trang {currentPage} / {totalPages}
               </span>
               <button
                 onClick={() => setCurrentPage(prev => prev + 1)}
                 disabled={!hasNext}
-                className="px-3 py-1 rounded border disabled:opacity-50"
+                className="px-3 py-1 text-gray-800 rounded border disabled:opacity-50"
               >
-                Next
+                Tiếp
               </button>
             </div>
           )}

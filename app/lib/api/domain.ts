@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '@/app/lib/utils/constants';
 import { PaginatedResponse } from './types';
+import { apiClient } from './apiClient';
 
 export interface Domain {
   id: string;
@@ -30,66 +31,21 @@ export async function getDomains(
   skip = 0, 
   limit = 10
 ): Promise<PaginatedResponse<Domain>> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/domains/?skip=${skip}&limit=${limit}`,
-    {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'ngrok-skip-browser-warning': '1'
-      }
-    }
+  return apiClient.get<PaginatedResponse<Domain>>(
+    `/api/domains/?skip=${skip}&limit=${limit}`,
+    { token }
   );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to fetch domains');
-  }
-
-  return response.json();
 }
 
 export async function getDomain(token: string, domainId: string): Promise<Domain> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/domains/${domainId}`,
-    {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'ngrok-skip-browser-warning': '1'
-      }
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to fetch domain');
-  }
-
-  return response.json();
+  return apiClient.get<Domain>(`/api/domains/${domainId}`, { token });
 }
 
 export async function createDomain(
   token: string, 
   domainData: DomainCreate
 ): Promise<Domain> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/domains/`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'ngrok-skip-browser-warning': '1'
-      },
-      body: JSON.stringify(domainData)
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to create domain');
-  }
-
-  return response.json();
+  return apiClient.post<Domain>('/api/domains/', domainData, { token });
 }
 
 export async function updateDomain(
@@ -97,25 +53,7 @@ export async function updateDomain(
   domainId: string, 
   domainData: DomainUpdate
 ): Promise<Domain> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/domains/${domainId}`,
-    {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'ngrok-skip-browser-warning': '1'
-      },
-      body: JSON.stringify(domainData)
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to update domain');
-  }
-
-  return response.json();
+  return apiClient.put<Domain>(`/api/domains/${domainId}`, domainData, { token });
 }
 
 export async function deleteDomain(
@@ -123,21 +61,8 @@ export async function deleteDomain(
   domainId: string, 
   softDelete = true
 ): Promise<any> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/domains/${domainId}?soft_delete=${softDelete}`,
-    {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'ngrok-skip-browser-warning': '1'
-      }
-    }
+  return apiClient.delete<any>(
+    `/api/domains/${domainId}?soft_delete=${softDelete}`,
+    { token }
   );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to delete domain');
-  }
-
-  return response.json();
 } 

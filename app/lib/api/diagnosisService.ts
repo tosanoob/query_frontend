@@ -1,4 +1,6 @@
 import { API_BASE_URL } from '@/app/lib/utils/constants';
+import { apiClient } from './apiClient';
+import { handleAuthError } from '../utils/auth';
 
 interface DiagnosisRequest {
   image?: File;
@@ -43,16 +45,7 @@ export const submitDiagnosis = async (data: DiagnosisRequest): Promise<Diagnosis
       formData.append('symptoms', data.symptoms);
     }
     
-    const response = await fetch(`${API_BASE_URL}/api/diagnosis`, {
-      method: 'POST',
-      body: formData,
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Lỗi ${response.status}: ${response.statusText}`);
-    }
-    
-    return await response.json();
+    return await apiClient.postFormData<DiagnosisResult>('/api/diagnosis', formData);
   } catch (error) {
     console.error('Lỗi khi gửi yêu cầu chẩn đoán:', error);
     throw error;
@@ -66,18 +59,7 @@ export const submitDiagnosis = async (data: DiagnosisRequest): Promise<Diagnosis
  */
 export const getDiagnosisResult = async (id: string): Promise<DiagnosisResult> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/diagnosis/${id}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Lỗi ${response.status}: ${response.statusText}`);
-    }
-    
-    return await response.json();
+    return await apiClient.get<DiagnosisResult>(`/api/diagnosis/${id}`);
   } catch (error) {
     console.error('Lỗi khi lấy kết quả chẩn đoán:', error);
     throw error;
