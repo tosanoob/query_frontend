@@ -37,7 +37,7 @@ export default function EditDisease({ params }: { params: Promise<{ id: string }
       setIsLoadingDomains(true);
       try {
         const domainsData = await getDomains(token);
-        setDomains(domainsData);
+        setDomains(domainsData.items);
       } catch (err) {
         console.error('Error fetching domains:', err);
       } finally {
