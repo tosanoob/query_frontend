@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getDiseases, Disease } from '../lib/api/disease';
+import { getDomains, Domain } from '../lib/api/domain';
 
 // Component để hiển thị danh sách bệnh
 async function DiseasesList({ searchParams }: { searchParams: { [key: string]: string | string[] | undefined } }) {
@@ -100,6 +101,7 @@ async function DiseasesList({ searchParams }: { searchParams: { [key: string]: s
 
 export default function DiseasesPage() {
   const [diseases, setDiseases] = useState<Disease[]>([]);
+  const [standardDomain, setStandardDomain] = useState<Domain | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -107,13 +109,47 @@ export default function DiseasesPage() {
   const [hasNext, setHasNext] = useState(false);
   const [hasPrev, setHasPrev] = useState(false);
 
+  // Find the STANDARD domain first, then load diseases
+  useEffect(() => {
+    const loadStandardDomain = async () => {
+      try {
+        // Load domains to find the STANDARD domain
+        const response = await getDomains('', 0, 100); // Passing empty token for public access, getting all domains
+        const standardDomain = response.items.find(domain => domain.domain === 'STANDARD');
+        
+        if (standardDomain) {
+          setStandardDomain(standardDomain);
+        } else {
+          setError('Không tìm thấy domain chuẩn');
+        }
+      } catch (err) {
+        console.error('Error loading domains:', err);
+        setError((err as Error).message || 'Không thể tải domain chuẩn');
+      }
+    };
+    
+    loadStandardDomain();
+  }, []);
+
   const loadDiseases = async (page = 1) => {
     setIsLoading(true);
     setError(null);
+    
+    if (!standardDomain) {
+      setIsLoading(false);
+      return;
+    }
+    
     try {
       const skip = (page - 1) * 10;
       const response = await getDiseases(skip, 10);
-      setDiseases(response.items);
+      
+      // Filter diseases to only show those from STANDARD domain
+      const filteredDiseases = response.items.filter(
+        disease => disease.domain?.domain === 'STANDARD' || disease.domain?.id === standardDomain.id
+      );
+      
+      setDiseases(filteredDiseases);
       setTotalPages(response.pagination.pages);
       setHasNext(response.pagination.has_next);
       setHasPrev(response.pagination.has_prev);
@@ -127,8 +163,10 @@ export default function DiseasesPage() {
   };
 
   useEffect(() => {
-    loadDiseases(currentPage);
-  }, [currentPage]);
+    if (standardDomain) {
+      loadDiseases(currentPage);
+    }
+  }, [standardDomain, currentPage]);
 
   return (
     <div className="container mx-auto px-4 py-8">

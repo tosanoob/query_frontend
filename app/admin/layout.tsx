@@ -80,6 +80,12 @@ export default function AdminLayout({
             Quản lý Bệnh
           </Link>
           <Link 
+            href="/admin/crossmaps" 
+            className={`block px-4 py-2 rounded-md ${isActive('/admin/crossmaps')}`}
+          >
+            Ánh xạ Chẩn đoán
+          </Link>
+          <Link 
             href="/admin/articles" 
             className={`block px-4 py-2 rounded-md ${isActive('/admin/articles')}`}
           >

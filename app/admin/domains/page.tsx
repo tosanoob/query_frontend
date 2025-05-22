@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/lib/context/AuthContext';
-import { Domain, getDomains, deleteDomain } from '@/app/lib/api/domain';
+import { Domain, getDomains } from '@/app/lib/api/domain';
+import { deleteDataset } from '@/app/lib/api/dataset';
 import Link from 'next/link';
+import { toast } from 'react-hot-toast';
 
 export default function DomainsManagement() {
   const { token } = useAuth();
@@ -54,13 +56,23 @@ export default function DomainsManagement() {
   const handleDelete = async () => {
     if (!deleteId || !token) return;
     
+    const domainToDelete = domains.find(d => d.id === deleteId);
+    if (!domainToDelete) {
+      setError('Domain not found');
+      return;
+    }
+    
     try {
-      await deleteDomain(token, deleteId);
+      // Delete the dataset, which will also delete the domain
+      await deleteDataset(token, domainToDelete.domain);
+      
       setShowDeleteModal(false);
       setDeleteId(null);
+      toast.success(`Domain ${domainToDelete.domain} deleted successfully`);
       fetchDomains(); // Refresh list
     } catch (err) {
       setError((err as Error).message || 'Lỗi khi xóa domain');
+      toast.error(`Error deleting domain: ${(err as Error).message || 'Unknown error'}`);
     }
   };
 

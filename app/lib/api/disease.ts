@@ -116,4 +116,17 @@ export async function searchDiseases(
     `/api/diseases/search/${encodeURIComponent(searchTerm)}`,
     { token }
   );
+}
+
+export async function getDiseasesByDomain(
+  domainId: string,
+  skip = 0,
+  limit = 10,
+  token?: string,
+  active_only: boolean = true
+): Promise<PaginatedResponse<Disease>> {
+  return apiClient.get<PaginatedResponse<Disease>>(
+    `/api/diseases/domain/${domainId}?skip=${skip}&limit=${limit}&active_only=${active_only}`,
+    { token }
+  );
 } 
