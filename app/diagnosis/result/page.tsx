@@ -3,7 +3,10 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { API_BASE_URL, API_ENDPOINTS } from '../../lib/utils/constants';
+import { API_BASE_URL, API_ENDPOINTS, ROUTES } from '../../lib/utils/constants';
+import { Disease as DiseaseInfo } from '../../lib/api/disease';
+import { Domain } from '../../lib/api/domain';
+import { DiseaseCacheManager } from '../../lib/utils/diseaseCache';
 
 // Define types for the API response
 interface Disease {
@@ -47,8 +50,74 @@ export default function DiagnosisResultPage() {
   const [newMessage, setNewMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [cacheLoaded, setCacheLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Get cache instance
+  const diseaseCache = DiseaseCacheManager.getInstance();
+
+  // Fetch diseases from STANDARD domain and update cache
+  useEffect(() => {
+    const fetchStandardDiseases = async () => {
+      try {
+        // Check if cache has valid data first
+        if (diseaseCache.hasData()) {
+          console.log('Using cached disease data');
+          setCacheLoaded(true);
+          return;
+        }
+
+        console.log('Fetching fresh disease data from API');
+
+        // First get domains to find STANDARD domain - using direct API call without token
+        const domainsResponse = await fetch(`${API_BASE_URL}/api/domains/?skip=0&limit=100`, {
+          headers: {
+            'ngrok-skip-browser-warning': '1'
+          }
+        });
+        
+        if (!domainsResponse.ok) {
+          throw new Error('Failed to fetch domains');
+        }
+        
+        const domainsData = await domainsResponse.json();
+        const standardDomain = domainsData.items.find((domain: Domain) => domain.domain === 'STANDARD');
+        
+        if (standardDomain) {
+          // Fetch diseases from STANDARD domain - also without token for public access
+          const diseasesResponse = await fetch(`${API_BASE_URL}/api/diseases/domain/${standardDomain.id}?skip=0&limit=1000&active_only=true`, {
+            headers: {
+              'ngrok-skip-browser-warning': '1'
+            }
+          });
+          
+          if (!diseasesResponse.ok) {
+            throw new Error('Failed to fetch diseases');
+          }
+          
+          const diseasesData = await diseasesResponse.json();
+          
+          // Extract only id and label for caching
+          const minimalDiseases = diseasesData.items.map((disease: DiseaseInfo) => ({
+            id: disease.id,
+            label: disease.label
+          }));
+          
+          // Update cache with minimal data
+          diseaseCache.updateCache(minimalDiseases);
+          setCacheLoaded(true);
+          
+          console.log(`Cached ${minimalDiseases.length} diseases from STANDARD domain`);
+        }
+      } catch (error) {
+        console.error('Error fetching standard diseases:', error);
+        setCacheLoaded(true); // Set to true even on error to prevent infinite loading
+      }
+    };
+
+    fetchStandardDiseases();
+  }, [diseaseCache]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -100,6 +169,17 @@ export default function DiagnosisResultPage() {
       return '[Dữ liệu hệ thống]';
     }
     return String(data);
+  };
+
+  // Helper function to get disease info from cache
+  const getDiseaseInfo = (diseaseIdentifier: string): { disease: { id: string; label: string } | null; displayName: string } => {
+    const disease = diseaseCache.getDiseaseInfo(diseaseIdentifier);
+    if (disease) {
+      return { disease, displayName: disease.label };
+    }
+    
+    // If no mapping found, return the original identifier as display name
+    return { disease: null, displayName: diseaseIdentifier };
   };
 
   useEffect(() => {
@@ -238,8 +318,8 @@ export default function DiagnosisResultPage() {
     setIsSending(true);
     
     try {
-      // Prepare payload with chat history
-      const payload: { text: string; chat_history?: Array<any> } = {
+      // Prepare payload with chat history and original image
+      const payload: { text: string; chat_history?: Array<any>; image_base64?: string } = {
         text: userMessage.content
       };
       
@@ -247,6 +327,24 @@ export default function DiagnosisResultPage() {
       if (diagnosisResult?.chat_history) {
         payload.chat_history = diagnosisResult.chat_history;
       }
+
+      // Include original image if available for multi-turn conversation
+      const storedImagePreview = localStorage.getItem('diagnosis-image-preview');
+      if (storedImagePreview) {
+        // Get base64 string (remove prefix "data:image/jpeg;base64,")
+        const base64Image = storedImagePreview.split(',')[1];
+        if (base64Image) {
+          payload.image_base64 = base64Image;
+        }
+      }
+
+      console.log('Sending payload to API:', {
+        text: payload.text,
+        has_image: !!payload.image_base64,
+        chat_history_length: payload.chat_history?.length || 0,
+        endpoint: `${API_BASE_URL}${API_ENDPOINTS.DIAGNOSIS}`
+      });
+      console.log('Chat history content:', payload.chat_history);
       
       const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.DIAGNOSIS}`, {
         method: 'POST',
@@ -258,10 +356,27 @@ export default function DiagnosisResultPage() {
       });
       
       if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`);
+        // Get detailed error information
+        let errorDetail = `HTTP ${response.status}`;
+        try {
+          const errorData = await response.json();
+          console.error('API Error Response:', errorData);
+          errorDetail = errorData.detail || errorData.message || `HTTP ${response.status}`;
+        } catch (parseError) {
+          console.error('Could not parse error response:', parseError);
+          const errorText = await response.text();
+          console.error('Raw error response:', errorText);
+        }
+        
+        throw new Error(`API Error: ${response.status} - ${errorDetail}`);
       }
       
       const result = await response.json();
+      console.log('API Response received:', {
+        has_response: !!result.response,
+        has_chat_history: !!result.chat_history,
+        chat_history_length: result.chat_history?.length || 0
+      });
       
       // Add assistant response with safe content extraction - only use response.response
       const assistantResponse = safeExtractContent(result.response || 'Xin lỗi, tôi không thể phản hồi được.');
@@ -314,7 +429,7 @@ export default function DiagnosisResultPage() {
       console.error('Error sending message:', error);
       const errorMessage: ChatMessage = {
         role: 'assistant',
-        content: 'Xin lỗi, có lỗi xảy ra khi xử lý tin nhắn của bạn. Vui lòng thử lại.',
+        content: `Xin lỗi, có lỗi xảy ra khi xử lý tin nhắn của bạn: ${error instanceof Error ? error.message : 'Lỗi không xác định'}. Vui lòng thử lại.`,
         timestamp: new Date()
       };
       setChatMessages(prev => [...prev, errorMessage]);
@@ -323,7 +438,7 @@ export default function DiagnosisResultPage() {
     }
   };
 
-  if (loading) {
+  if (loading || !cacheLoaded) {
     return (
       <div className="container mx-auto px-4 py-10">
         <div className="max-w-6xl mx-auto text-center">
@@ -332,7 +447,7 @@ export default function DiagnosisResultPage() {
             <div className="h-4 bg-gray-200 rounded w-64 mx-auto mb-8"></div>
             <div className="h-64 bg-gray-200 rounded w-full mb-4"></div>
           </div>
-          <p>Đang tải kết quả chẩn đoán...</p>
+          <p>{loading ? 'Đang tải kết quả chẩn đoán...' : 'Đang tải thông tin bệnh từ cache...'}</p>
         </div>
       </div>
     );
@@ -353,6 +468,7 @@ export default function DiagnosisResultPage() {
   }
 
   const mostLikelyDisease = processedLabels.length > 0 ? processedLabels[0] : null;
+  const mostLikelyDiseaseInfo = mostLikelyDisease ? getDiseaseInfo(mostLikelyDisease.name) : null;
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -388,22 +504,44 @@ export default function DiagnosisResultPage() {
             {processedLabels.length > 0 && (
               <div className="bg-white rounded-lg shadow-md p-4">
                 <h3 className="text-lg font-semibold mb-3 text-gray-700">Khả năng các bệnh</h3>
-                {mostLikelyDisease && (
+                {mostLikelyDisease && mostLikelyDiseaseInfo && (
                   <div className="bg-blue-50 border-l-4 border-blue-500 p-3 mb-4">
                     <p className="text-sm text-blue-700">
-                      Chẩn đoán khả năng cao nhất: <span className="font-semibold">{mostLikelyDisease.name}</span>
+                      Chẩn đoán khả năng cao nhất: 
+                      {mostLikelyDiseaseInfo.disease ? (
+                        <Link 
+                          href={ROUTES.DISEASE_DETAIL(mostLikelyDiseaseInfo.disease.id)}
+                          className="font-semibold hover:underline ml-1"
+                        >
+                          {mostLikelyDiseaseInfo.displayName}
+                        </Link>
+                      ) : (
+                        <span className="font-semibold ml-1">{mostLikelyDiseaseInfo.displayName}</span>
+                      )}
                     </p>
                   </div>
                 )}
                 <div className="space-y-3 max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
-                  {processedLabels.slice(0, 5).map((disease, index) => (
-                    <div key={index} className="p-2 border border-gray-100 rounded">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-medium text-sm text-gray-800">{disease.name}</span>
+                  {processedLabels.slice(0, 5).map((disease, index) => {
+                    const diseaseInfo = getDiseaseInfo(disease.name);
+                    return (
+                      <div key={index} className="p-2 border border-gray-100 rounded">
+                        <div className="flex justify-between items-center mb-1">
+                          {diseaseInfo.disease ? (
+                            <Link 
+                              href={ROUTES.DISEASE_DETAIL(diseaseInfo.disease.id)}
+                              className="font-medium text-sm text-gray-800 hover:text-blue-600 hover:underline"
+                            >
+                              {diseaseInfo.displayName}
+                            </Link>
+                          ) : (
+                            <span className="font-medium text-sm text-gray-800">{diseaseInfo.displayName}</span>
+                          )}
+                        </div>
+                        {renderProbabilityBar(disease.score)}
                       </div>
-                      {renderProbabilityBar(disease.score)}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -489,7 +627,7 @@ export default function DiagnosisResultPage() {
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     placeholder="Nhập câu hỏi hoặc thông tin bổ sung..."
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     disabled={isSending}
                   />
                   <button
