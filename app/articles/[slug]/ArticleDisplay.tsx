@@ -152,7 +152,7 @@ export default function ArticleDisplay({ articleId }: ArticleDisplayProps) {
           </div>
         </header>
         
-        <div className="article-content text-gray-800" dangerouslySetInnerHTML={{ __html: article.content }} />
+        <div className="article-content text-gray-200" dangerouslySetInnerHTML={{ __html: article.content }} />
       </article>
     </div>
   );

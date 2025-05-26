@@ -2,16 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/app/lib/context/AuthContext';
-import { Disease, getDiseases, deleteDisease, getDiseasesByDomain } from '@/app/lib/api/disease';
 import { Domain, getDomains } from '@/app/lib/api/domain';
+import { deleteDataset } from '@/app/lib/api/dataset';
 import Link from 'next/link';
-import { createPortal } from 'react-dom';
+import { toast } from 'react-hot-toast';
 
-export default function DiseasesManagement() {
+export default function DomainsManagement() {
   const { token } = useAuth();
-  const [diseases, setDiseases] = useState<Disease[]>([]);
   const [domains, setDomains] = useState<Domain[]>([]);
-  const [activeDomainId, setActiveDomainId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -27,61 +25,28 @@ export default function DiseasesManagement() {
     return () => setIsMounted(false);
   }, []);
 
-  // Fetch domains first
-  useEffect(() => {
-    const fetchDomains = async () => {
-      if (!token) return;
-      
-      try {
-        const response = await getDomains(token, 0, 100); // Get all domains
-        setDomains(response.items);
-        
-        // Set STANDARD domain as active by default
-        const standardDomain = response.items.find(domain => domain.domain === 'STANDARD');
-        if (standardDomain) {
-          setActiveDomainId(standardDomain.id);
-        } else if (response.items.length > 0) {
-          setActiveDomainId(response.items[0].id);
-        }
-      } catch (err) {
-        setError((err as Error).message || 'Không thể tải danh sách domain');
-        console.error('Error fetching domains:', err);
-      }
-    };
-    
-    if (token) {
-      fetchDomains();
-    }
-  }, [token]);
-
-  const fetchDiseases = async (domainId: string | null = null, page = 1) => {
-    if (!token || !domainId) return;
-    
+  const fetchDomains = async () => {
     setIsLoading(true);
     try {
-      // Use domain-specific API when a domain is selected
-      const response = domainId
-        ? await getDiseasesByDomain(domainId, (page - 1) * 10, 10, token, false)
-        : await getDiseases((page - 1) * 10, 10, token, false);
-      
-      setDiseases(response.items);
+      const response = await getDomains(token || '', (currentPage - 1) * 10, 10);
+      setDomains(response.items);
       setTotalPages(response.pagination.pages);
       setHasNext(response.pagination.has_next);
       setHasPrev(response.pagination.has_prev);
       setError(null);
     } catch (err) {
-      setError((err as Error).message || 'Không thể tải danh sách bệnh');
-      console.error('Error fetching diseases:', err);
+      setError((err as Error).message || 'Không thể tải danh sách domain');
+      console.error('Error fetching domains:', err);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    if (token && activeDomainId) {
-      fetchDiseases(activeDomainId, currentPage);
+    if (token) {
+      fetchDomains();
     }
-  }, [token, activeDomainId, currentPage]);
+  }, [token, currentPage]);
 
   const confirmDelete = (id: string) => {
     setDeleteId(id);
@@ -91,30 +56,35 @@ export default function DiseasesManagement() {
   const handleDelete = async () => {
     if (!deleteId || !token) return;
     
+    const domainToDelete = domains.find(d => d.id === deleteId);
+    if (!domainToDelete) {
+      setError('Domain not found');
+      return;
+    }
+    
     try {
-      await deleteDisease(token, deleteId);
+      // Delete the dataset, which will also delete the domain
+      await deleteDataset(token, domainToDelete.domain);
+      
       setShowDeleteModal(false);
       setDeleteId(null);
-      fetchDiseases(activeDomainId, currentPage); // Refresh list with current domain
+      toast.success(`Domain ${domainToDelete.domain} deleted successfully`);
+      fetchDomains(); // Refresh list
     } catch (err) {
-      setError((err as Error).message || 'Lỗi khi xóa bệnh');
+      setError((err as Error).message || 'Lỗi khi xóa domain');
+      toast.error(`Error deleting domain: ${(err as Error).message || 'Unknown error'}`);
     }
-  };
-
-  const handleDomainChange = (domainId: string) => {
-    setActiveDomainId(domainId);
-    setCurrentPage(1); // Reset to first page when changing domain
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl text-gray-700 font-bold">Quản lý Bệnh</h1>
+        <h1 className="text-3xl text-gray-700 font-bold">Quản lý Domain</h1>
         <Link 
-          href="/admin/diseases/new" 
+          href="/admin/domains/new" 
           className="bg-primary text-indigo-700 px-4 py-2 rounded-md hover:bg-primary/90"
         >
-          Thêm bệnh mới
+          Thêm domain mới
         </Link>
       </div>
 
@@ -123,26 +93,6 @@ export default function DiseasesManagement() {
           {error}
         </div>
       )}
-
-      {/* Domain Tabs */}
-      <div className="mb-6 border-b border-gray-200">
-        <ul className="flex flex-wrap -mb-px">
-          {domains.map(domain => (
-            <li key={domain.id} className="mr-2">
-              <button
-                onClick={() => handleDomainChange(domain.id)}
-                className={`inline-block py-2 px-4 text-sm font-medium ${
-                  activeDomainId === domain.id
-                    ? 'text-indigo-600 border-b-2 border-indigo-600 rounded-t-lg'
-                    : 'text-gray-500 hover:text-gray-700 hover:border-gray-300 border-b-2 border-transparent'
-                }`}
-              >
-                {domain.domain}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
 
       {isLoading ? (
         <div className="text-center py-8">
@@ -154,16 +104,13 @@ export default function DiseasesManagement() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Tên bệnh
+                  Tên Domain
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Domain
+                  Mô tả
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Bài viết
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
-                  Chẩn đoán
+                  Ngày tạo
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-700 uppercase tracking-wider">
                   Thao tác
@@ -171,60 +118,35 @@ export default function DiseasesManagement() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {diseases.length === 0 ? (
+              {domains.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-700">
-                    {activeDomainId 
-                      ? `Không tìm thấy bệnh nào thuộc domain ${domains.find(d => d.id === activeDomainId)?.domain || ''}`
-                      : 'Không tìm thấy bệnh nào'}
+                  <td colSpan={4} className="px-6 py-4 text-center text-gray-700">
+                    Không tìm thấy domain nào
                   </td>
                 </tr>
               ) : (
-                diseases.map((disease) => (
-                  <tr key={disease.id}>
+                domains.map((domain) => (
+                  <tr key={domain.id}>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{disease.label}</div>
-                      {disease.description && (
-                        <div className="text-sm text-gray-700 truncate max-w-xs">
-                          {disease.description}
-                        </div>
-                      )}
+                      <div className="font-medium text-gray-900">{domain.domain}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {disease.domain?.domain || 'N/A'}
+                      {domain.description || 'Không có mô tả'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                      {disease.article_id ? (
-                        <Link
-                          href={`/admin/articles/${disease.article_id}`}
-                          className="text-primary hover:underline"
-                        >
-                          Xem bài viết
-                        </Link>
-                      ) : (
-                        'Không có'
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          disease.included_in_diagnosis
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}
-                      >
-                        {disease.included_in_diagnosis ? 'Bật' : 'Tắt'}
-                      </span>
+                      {domain.created_at 
+                        ? new Date(domain.created_at).toLocaleDateString('vi-VN') 
+                        : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <Link
-                        href={`/admin/diseases/${disease.id}`}
+                        href={`/admin/domains/${domain.id}`}
                         className="text-primary text-gray-400 hover:text-primary/80 mr-4"
                       >
                         Chi tiết
                       </Link>
                       <Link
-                        href={`/admin/diseases/${disease.id}/edit`}
+                        href={`/admin/domains/${domain.id}/edit`}
                         className="text-indigo-600 hover:text-indigo-900 mr-4"
                       >
                         Sửa
@@ -232,7 +154,7 @@ export default function DiseasesManagement() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          confirmDelete(disease.id);
+                          confirmDelete(domain.id);
                         }}
                         className="text-red-600 hover:text-red-900"
                       >
@@ -268,7 +190,7 @@ export default function DiseasesManagement() {
                   </h3>
                   <div className="mt-2">
                     <p className="text-sm text-gray-700">
-                      Bạn có chắc chắn muốn xóa bệnh này? Hành động này không thể hoàn tác.
+                      Bạn có chắc chắn muốn xóa domain này? Hành động này không thể hoàn tác.
                     </p>
                   </div>
                 </div>
@@ -298,27 +220,25 @@ export default function DiseasesManagement() {
       )}
 
       {/* Add pagination controls */}
-      {diseases.length > 0 && (
-        <div className="mt-4 flex justify-center items-center space-x-2">
-          <button
-            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-            disabled={!hasPrev}
-            className="px-3 py-1 text-gray-800 rounded border disabled:opacity-50"
-          >
-            Trước
-          </button>
-          <span className="text-gray-800 text-sm">
-            Trang {currentPage} / {totalPages || 1}
-          </span>
-          <button
-            onClick={() => setCurrentPage(prev => prev + 1)}
-            disabled={!hasNext}
-            className="px-3 py-1 text-gray-800 rounded border disabled:opacity-50"
-          >
-            Sau
-          </button>
-        </div>
-      )}
+      <div className="mt-4 flex justify-center items-center space-x-2">
+        <button
+          onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+          disabled={!hasPrev}
+          className="px-3 py-1 text-gray-800 rounded border disabled:opacity-50"
+        >
+          Trước
+        </button>
+        <span className="text-gray-800 text-sm">
+          Trang {currentPage} / {totalPages}
+        </span>
+        <button
+          onClick={() => setCurrentPage(prev => prev + 1)}
+          disabled={!hasNext}
+          className="px-3 py-1 text-gray-800 rounded border disabled:opacity-50"
+        >
+          Tiếp
+        </button>
+      </div>
     </div>
   );
 } 

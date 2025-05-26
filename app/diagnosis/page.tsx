@@ -9,10 +9,21 @@ import { API_BASE_URL, API_ENDPOINTS } from '../lib/utils/constants';
 export default function DiagnosisPage() {
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [symptoms, setSymptoms] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [compressionInfo, setCompressionInfo] = useState<string | null>(null);
   const router = useRouter();
+
+  // 7 câu hỏi riêng biệt
+  const [symptomsQuestions, setSymptomsQuestions] = useState({
+    q1: '', // Bạn gặp tình trạng này từ khi nào?
+    q2: '', // Tổn thương này có phát triển thêm hay thay đổi hình dạng gần đây không?
+    q3: '', // Bạn có thể cho biết tổn thương xuất hiện ở vùng nào trên cơ thể không?
+    q4: '', // Bạn cảm thấy đau hay ngứa như thế nào?
+    q5: '', // Kích thước của tổn thương vào khoảng bao nhiêu cm đường kính?
+    q6: '', // Gia đình bạn có tiền sử dị ứng hay tiền sử bệnh da liễu không?
+    q7: '', // Gần đây bạn có sử dụng thuốc hay sản phẩm bôi da nào không?
+  });
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -32,7 +43,7 @@ export default function DiagnosisPage() {
       setErrorMessage(null);
       setImage(file);
       
-      // Convert image to RGB format before creating base64 string
+      // Convert and resize image to reduce storage size
       const reader = new FileReader();
       reader.onload = (event: ProgressEvent<FileReader>) => {
         const img = document.createElement('img');
@@ -46,22 +57,73 @@ export default function DiagnosisPage() {
             return;
           }
           
-          // Set canvas dimensions to match image
-          canvas.width = img.width;
-          canvas.height = img.height;
+          // Calculate optimal dimensions (max 1024x768 for storage efficiency)
+          const maxWidth = 1024;
+          const maxHeight = 768;
+          let { width, height } = img;
+          
+          // Calculate scale factor to maintain aspect ratio
+          const scaleX = maxWidth / width;
+          const scaleY = maxHeight / height;
+          const scale = Math.min(scaleX, scaleY, 1); // Don't upscale
+          
+          const newWidth = Math.round(width * scale);
+          const newHeight = Math.round(height * scale);
+          
+          // Set canvas dimensions to the new size
+          canvas.width = newWidth;
+          canvas.height = newHeight;
           
           // Draw image with white background to ensure RGB format
           ctx.fillStyle = '#FFFFFF';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0);
+          ctx.fillRect(0, 0, newWidth, newHeight);
           
-          // Convert canvas to data URL (JPEG for RGB format)
+          // Draw the resized image
+          ctx.drawImage(img, 0, 0, newWidth, newHeight);
+          
+          // Function to compress image with adjustable quality
+          const compressImage = (quality: number): string => {
+            return canvas.toDataURL('image/jpeg', quality);
+          };
+          
           try {
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+            // Start with good quality and reduce if needed
+            let dataUrl = compressImage(0.8);
+            
+            // Check if still too large (aim for < 500KB base64)
+            // Base64 is roughly 4/3 of original size, so aim for < 375KB actual
+            const maxBase64Size = 500 * 1024; // 500KB
+            
+            if (dataUrl.length > maxBase64Size) {
+              // Try lower quality
+              dataUrl = compressImage(0.6);
+              
+              if (dataUrl.length > maxBase64Size) {
+                // Even lower quality if still too large
+                dataUrl = compressImage(0.4);
+                
+                if (dataUrl.length > maxBase64Size) {
+                  // Final attempt with very low quality
+                  dataUrl = compressImage(0.2);
+                }
+              }
+            }
+            
+            // Show compression info to user
+            const originalSizeKB = Math.round(file.size / 1024);
+            const compressedSizeKB = Math.round((dataUrl.length * 3) / 4 / 1024);
+            
+            if (compressedSizeKB < originalSizeKB) {
+              console.log(`Image compressed: ${originalSizeKB}KB → ${compressedSizeKB}KB`);
+              setCompressionInfo(`Hình ảnh đã được tối ưu: ${originalSizeKB}KB → ${compressedSizeKB}KB`);
+            } else {
+              setCompressionInfo(null);
+            }
+            
             setImagePreview(dataUrl);
           } catch (error) {
-            console.error('Lỗi khi chuyển đổi hình ảnh:', error);
-            setErrorMessage('Không thể xử lý hình ảnh. Vui lòng thử lại.');
+            console.error('Lỗi khi nén hình ảnh:', error);
+            setErrorMessage('Không thể xử lý hình ảnh. Vui lòng thử lại với hình ảnh khác.');
           }
         };
         
@@ -83,11 +145,20 @@ export default function DiagnosisPage() {
     }
   };
 
+  // Hàm xử lý thay đổi cho các câu hỏi triệu chứng
+  const handleSymptomChange = (questionKey: keyof typeof symptomsQuestions, value: string) => {
+    setSymptomsQuestions(prev => ({
+      ...prev,
+      [questionKey]: value
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!image && !symptoms) {
-      setErrorMessage('Vui lòng tải lên hình ảnh hoặc mô tả triệu chứng để tiến hành chẩn đoán');
+    // Require either image or at least one answer for initial diagnosis
+    if (!image && !Object.values(symptomsQuestions).some(val => val.trim() !== '')) {
+      setErrorMessage('Vui lòng tải lên hình ảnh hoặc trả lời ít nhất một câu hỏi về triệu chứng để tiến hành chẩn đoán');
       return;
     }
 
@@ -95,52 +166,58 @@ export default function DiagnosisPage() {
     setErrorMessage(null);
     
     try {
-      // Xóa kết quả chẩn đoán cũ trước khi bắt đầu chẩn đoán mới
-      localStorage.removeItem('diagnosis-result');
-      
-      // Tạo request payload
+      // Clear old localStorage data to prevent quota issues
+      try {
+        localStorage.removeItem('diagnosis-result');
+        localStorage.removeItem('diagnosis-image-preview');
+      } catch (clearError) {
+        console.warn('Could not clear localStorage:', clearError);
+      }
+
+      // Create request payload for initial diagnosis
       const payload: { image_base64?: string; text?: string } = {};
       
+      // Add image if provided
       if (image && imagePreview) {
-        // Lấy phần base64 từ string (loại bỏ phần prefix "data:image/jpeg;base64,")
+        // Get base64 string (remove prefix "data:image/jpeg;base64,")
         const base64Image = imagePreview.split(',')[1];
         payload.image_base64 = base64Image;
         
-        // Xóa cache cũ trước khi lưu ảnh mới
+        // Store image in localStorage for result page with error handling
         try {
-          if ('caches' in window) {
-            // Xóa cache cũ
-            await caches.delete('diagnosis-images');
-            
-            // Tạo cache mới
-            const cache = await caches.open('diagnosis-images');
-            const response = new Response(image);
-            await cache.put('latest-image', response);
-            
-            // Cập nhật imagePreview vào localStorage, ghi đè nếu đã tồn tại
-            localStorage.setItem('diagnosis-image-preview', imagePreview);
-          }
-        } catch (cacheError) {
-          console.error('Lỗi khi lưu cache:', cacheError);
-          // Không dừng quy trình nếu việc lưu cache thất bại
-        }
-      } else {
-        // Nếu không có ảnh mới, xóa ảnh cũ trong cache và localStorage
-        try {
-          if ('caches' in window) {
-            await caches.delete('diagnosis-images');
-          }
-          localStorage.removeItem('diagnosis-image-preview');
-        } catch (error) {
-          console.error('Lỗi khi xóa cache:', error);
+          localStorage.setItem('diagnosis-image-preview', imagePreview);
+        } catch (storageError) {
+          console.warn('Could not store image preview:', storageError);
+          // Continue without storing image preview if localStorage fails
         }
       }
       
-      if (symptoms) {
-        payload.text = symptoms;
+      // Format text from questions and answers
+      const questions = [
+        'Bạn gặp tình trạng này từ khi nào? (vài ngày trước, vài tháng trước hay lâu hơn?)',
+        'Tổn thương này có phát triển thêm hay thay đổi hình dạng gần đây không?',
+        'Bạn có thể cho biết tổn thương xuất hiện ở vùng nào trên cơ thể không? (bàn tay, cánh tay, cổ,...)',
+        'Bạn cảm thấy đau hay ngứa như thế nào? (đau khi nhấn, luôn đau, ngứa nhiều?)',
+        'Kích thước của tổn thương vào khoảng bao nhiêu cm đường kính?',
+        'Gia đình bạn có tiền sử dị ứng hay tiền sử bệnh da liễu không? Yếu tố di truyền cũng sẽ ảnh hưởng đến tình trạng của bạn',
+        'Gần đây bạn có sử dụng thuốc hay sản phẩm bôi da nào không? Vui lòng nêu rõ nếu bạn có sử dụng'
+      ];
+      
+      const answers = Object.values(symptomsQuestions);
+      let formattedText = '';
+      
+      // Format according to question-answer structure
+      for (let i = 0; i < questions.length; i++) {
+        if (answers[i].trim() !== '') {
+          formattedText += `${questions[i]}: ${answers[i]}\n`;
+        }
       }
       
-      // Gọi API
+      if (formattedText.trim() !== '') {
+        payload.text = formattedText.trim();
+      }
+      
+      // Call API for initial diagnosis
       const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.DIAGNOSIS}`, {
         method: 'POST',
         headers: {
@@ -157,31 +234,44 @@ export default function DiagnosisPage() {
       
       const result = await response.json();
       
-      // Kiểm tra cấu trúc kết quả
-      if (!result.labels || !Array.isArray(result.labels)) {
-        throw new Error('Dữ liệu phản hồi không hợp lệ');
+      // Store only essential result data in localStorage with error handling
+      try {
+        // Create a smaller version of the result for localStorage
+        const essentialResult = {
+          labels: result.labels,
+          response: result.response,
+          answer: result.answer,
+          chat_history: result.chat_history,
+          question: result.question,
+          recommendations: result.recommendations?.slice(0, 5), // Limit recommendations to prevent large data
+          // Add info about whether user provided text in initial request
+          hasInitialUserText: formattedText.trim() !== '',
+          initialUserText: formattedText.trim() || null,
+          // Don't store large unnecessary data
+        };
+        
+        localStorage.setItem('diagnosis-result', JSON.stringify(essentialResult));
+      } catch (storageError) {
+        console.error('Could not store diagnosis result in localStorage:', storageError);
+        
+        // Try storing minimal data if full storage fails
+        try {
+          const minimalResult = {
+            answer: result.answer || result.response || 'Đã nhận được kết quả chẩn đoán',
+            chat_history: result.chat_history || [],
+            labels: result.labels?.slice(0, 3) || [], // Only store top 3 labels
+            hasInitialUserText: formattedText.trim() !== '',
+            initialUserText: formattedText.trim() || null,
+          };
+          localStorage.setItem('diagnosis-result', JSON.stringify(minimalResult));
+        } catch (fallbackError) {
+          console.error('Could not store even minimal result:', fallbackError);
+          // If localStorage completely fails, continue to result page anyway
+          // The result page will show an error message about missing data
+        }
       }
       
-      // Chuyển đổi cấu trúc labels từ mảng 2D sang mảng đối tượng và sắp xếp
-      // Format từ API: [["BỆNH_A", 0.75], ["BỆNH_B", 0.25]]
-      // Format cần chuyển đổi: [{name: "BỆNH_A", score: 0.75}, {name: "BỆNH_B", score: 0.25}]
-      if (Array.isArray(result.labels[0])) {
-        const formattedLabels = result.labels.map((label: [string, number]) => ({
-          name: label[0],
-          score: label[1]
-        }));
-        
-        // Sắp xếp theo điểm số giảm dần
-        formattedLabels.sort((a: {score: number}, b: {score: number}) => b.score - a.score);
-        
-        // Cập nhật kết quả với labels đã định dạng
-        result.labels = formattedLabels;
-      }
-      
-      // Lưu kết quả vào localStorage để trang kết quả có thể truy cập
-      localStorage.setItem('diagnosis-result', JSON.stringify(result));
-      
-      // Chuyển hướng đến trang kết quả
+      // Redirect to result page
       router.push('/diagnosis/result');
     } catch (error) {
       console.error('Lỗi khi gửi yêu cầu chẩn đoán:', error);
@@ -195,8 +285,12 @@ export default function DiagnosisPage() {
     <div className="container mx-auto px-4 py-10">
       <div className="max-w-3xl mx-auto">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-white-900 mb-4">Chẩn đoán bệnh da liễu</h1>
-          <p className="text-gray-600">Tải lên hình ảnh và mô tả triệu chứng của bạn để nhận chẩn đoán</p>
+          <h1 className="text-3xl font-bold text-white-900 mb-4">
+            Chẩn đoán bệnh da liễu
+          </h1>
+          <p className="text-gray-600">
+            Tải lên hình ảnh và mô tả triệu chứng của bạn để nhận chẩn đoán
+          </p>
         </div>
 
         {errorMessage && (
@@ -247,28 +341,138 @@ export default function DiagnosisPage() {
                     onClick={() => {
                       setImage(null);
                       setImagePreview(null);
+                      setCompressionInfo(null);
                     }}
                     className="mt-2 text-sm text-red-600 hover:text-red-800"
                   >
                     Xóa hình ảnh
                   </button>
                 )}
+                {compressionInfo && (
+                  <p className="mt-2 text-sm text-green-600">
+                    <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {compressionInfo}
+                  </p>
+                )}
               </div>
 
               <div className="mb-6">
-                <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="symptoms">
-                  Mô tả triệu chứng {!image && <span className="text-red-500">*</span>}
+                <label className="block text-gray-700 text-sm font-medium mb-4">
+                  Vui lòng cung cấp thêm thông tin để chẩn đoán chính xác hơn
+                  {!image && <span className="text-red-500">*</span>}
                 </label>
-                <textarea
-                  id="symptoms"
-                  rows={5}
-                  value={symptoms}
-                  onChange={(e) => setSymptoms(e.target.value)}
-                  placeholder="Mô tả chi tiết các triệu chứng, thời gian xuất hiện, các thay đổi trên da, vị trí, cảm giác (đau, ngứa, v.v.)..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none text-gray-800 placeholder-gray-600"
-                />
-                <p className="mt-1 text-sm text-gray-500">
-                  {!image ? "Vui lòng mô tả triệu chứng hoặc tải lên hình ảnh" : "Mô tả thêm triệu chứng sẽ giúp chẩn đoán chính xác hơn"}
+                
+                <div className="space-y-4">
+                  {/* Câu hỏi 1 */}
+                  <div>
+                    <label className="block text-gray-700 text-sm mb-1" htmlFor="q1">
+                      Bạn gặp tình trạng này từ khi nào? (vài ngày trước, vài tháng trước hay lâu hơn?)
+                    </label>
+                    <input
+                      id="q1"
+                      type="text"
+                      value={symptomsQuestions.q1}
+                      onChange={(e) => handleSymptomChange('q1', e.target.value)}
+                      placeholder="Vui lòng nhập câu trả lời của bạn..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder-gray-400"
+                    />
+                  </div>
+                  
+                  {/* Câu hỏi 2 */}
+                  <div>
+                    <label className="block text-gray-700 text-sm mb-1" htmlFor="q2">
+                      Tổn thương này có phát triển thêm hay thay đổi hình dạng gần đây không?
+                    </label>
+                    <input
+                      id="q2"
+                      type="text"
+                      value={symptomsQuestions.q2}
+                      onChange={(e) => handleSymptomChange('q2', e.target.value)}
+                      placeholder="Vui lòng nhập câu trả lời của bạn..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder-gray-400"
+                    />
+                  </div>
+                  
+                  {/* Câu hỏi 3 */}
+                  <div>
+                    <label className="block text-gray-700 text-sm mb-1" htmlFor="q3">
+                      Bạn có thể cho biết tổn thương xuất hiện ở vùng nào trên cơ thể không? (bàn tay, cánh tay, cổ,...)
+                    </label>
+                    <input
+                      id="q3"
+                      type="text"
+                      value={symptomsQuestions.q3}
+                      onChange={(e) => handleSymptomChange('q3', e.target.value)}
+                      placeholder="Vui lòng nhập câu trả lời của bạn..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder-gray-400"
+                    />
+                  </div>
+                  
+                  {/* Câu hỏi 4 */}
+                  <div>
+                    <label className="block text-gray-700 text-sm mb-1" htmlFor="q4">
+                      Bạn cảm thấy đau hay ngứa như thế nào? (đau khi nhấn, luôn đau, ngứa nhiều?)
+                    </label>
+                    <input
+                      id="q4"
+                      type="text"
+                      value={symptomsQuestions.q4}
+                      onChange={(e) => handleSymptomChange('q4', e.target.value)}
+                      placeholder="Vui lòng nhập câu trả lời của bạn..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder-gray-400"
+                    />
+                  </div>
+                  
+                  {/* Câu hỏi 5 */}
+                  <div>
+                    <label className="block text-gray-700 text-sm mb-1" htmlFor="q5">
+                      Kích thước của tổn thương vào khoảng bao nhiêu cm đường kính?
+                    </label>
+                    <input
+                      id="q5"
+                      type="text"
+                      value={symptomsQuestions.q5}
+                      onChange={(e) => handleSymptomChange('q5', e.target.value)}
+                      placeholder="Vui lòng nhập câu trả lời của bạn..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder-gray-400"
+                    />
+                  </div>
+                  
+                  {/* Câu hỏi 6 */}
+                  <div>
+                    <label className="block text-gray-700 text-sm mb-1" htmlFor="q6">
+                      Gia đình bạn có tiền sử dị ứng hay tiền sử bệnh da liễu không? Yếu tố di truyền cũng sẽ ảnh hưởng đến tình trạng của bạn
+                    </label>
+                    <input
+                      id="q6"
+                      type="text"
+                      value={symptomsQuestions.q6}
+                      onChange={(e) => handleSymptomChange('q6', e.target.value)}
+                      placeholder="Vui lòng nhập câu trả lời của bạn..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder-gray-400"
+                    />
+                  </div>
+                  
+                  {/* Câu hỏi 7 */}
+                  <div>
+                    <label className="block text-gray-700 text-sm mb-1" htmlFor="q7">
+                      Gần đây bạn có sử dụng thuốc hay sản phẩm bôi da nào không? Vui lòng nêu rõ nếu bạn có sử dụng
+                    </label>
+                    <input
+                      id="q7"
+                      type="text"
+                      value={symptomsQuestions.q7}
+                      onChange={(e) => handleSymptomChange('q7', e.target.value)}
+                      placeholder="Vui lòng nhập câu trả lời của bạn..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 placeholder-gray-400"
+                    />
+                  </div>
+                </div>
+                
+                <p className="mt-3 text-sm text-gray-500">
+                  {!image ? "Vui lòng cung cấp thông tin hoặc tải lên hình ảnh" : "Cung cấp thêm thông tin sẽ giúp chẩn đoán chính xác hơn"}
                 </p>
               </div>
 
@@ -281,12 +485,12 @@ export default function DiagnosisPage() {
                 </Link>
                 <button
                   type="submit"
-                  disabled={isSubmitting || (!image && !symptoms)}
+                  disabled={isSubmitting || (!image && !Object.values(symptomsQuestions).some(val => val.trim() !== ''))}
                   className={`px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors ${
-                    (isSubmitting || (!image && !symptoms)) ? 'opacity-50 cursor-not-allowed' : ''
+                    (isSubmitting || (!image && !Object.values(symptomsQuestions).some(val => val.trim() !== ''))) ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
-                  {isSubmitting ? 'Đang xử lý...' : 'Chẩn đoán'}
+                  {isSubmitting ? 'Đang xử lý...' : 'Bắt đầu chẩn đoán'}
                 </button>
               </div>
             </form>

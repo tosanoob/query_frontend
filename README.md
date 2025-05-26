@@ -2,7 +2,23 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+### Environment Configuration
+
+Before running the application, you need to set up your environment variables:
+
+1. Create a `.env.local` file in the root directory
+2. Add the following configuration:
+
+```
+# API Configuration
+NEXT_PUBLIC_API_BASE_URL=your_api_base_url_here
+```
+
+Replace `your_api_base_url_here` with the actual URL of your backend API.
+
+### Development Server
+
+Run the development server:
 
 ```bash
 npm run dev

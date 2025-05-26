@@ -1,4 +1,6 @@
 import { API_BASE_URL } from '@/app/lib/utils/constants';
+import { PaginatedResponse } from './types';
+import { apiClient } from './apiClient';
 
 interface ClinicImage {
   id: string;
@@ -50,70 +52,27 @@ export interface ClinicUpdate {
 
 export async function getClinics(
   skip = 0, 
-  limit = 100, 
+  limit = 10, 
   search?: string | null
-): Promise<Clinic[]> {
-  let url = `${API_BASE_URL}/api/clinic/?skip=${skip}&limit=${limit}`;
+): Promise<PaginatedResponse<Clinic>> {
+  let url = `/api/clinic/?skip=${skip}&limit=${limit}`;
   
   if (search) {
     url += `&search=${encodeURIComponent(search)}`;
   }
   
-  const response = await fetch(url, {
-    headers: {
-      'ngrok-skip-browser-warning': '1'
-    }
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to fetch clinics');
-  }
-
-  return response.json();
+  return apiClient.get<PaginatedResponse<Clinic>>(url);
 }
 
 export async function getClinic(clinicId: string): Promise<Clinic> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/clinic/${clinicId}`,
-    {
-      headers: {
-        'ngrok-skip-browser-warning': '1'
-      }
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to fetch clinic');
-  }
-
-  return response.json();
+  return apiClient.get<Clinic>(`/api/clinic/${clinicId}`);
 }
 
 export async function createClinic(
   token: string, 
   clinicData: ClinicCreate
 ): Promise<Clinic> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/clinic/`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'ngrok-skip-browser-warning': '1'
-      },
-      body: JSON.stringify(clinicData)
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to create clinic');
-  }
-
-  return response.json();
+  return apiClient.post<Clinic>('/api/clinic/', clinicData, { token });
 }
 
 export async function updateClinic(
@@ -121,25 +80,7 @@ export async function updateClinic(
   clinicId: string, 
   clinicData: ClinicUpdate
 ): Promise<Clinic> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/clinic/${clinicId}`,
-    {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'ngrok-skip-browser-warning': '1'
-      },
-      body: JSON.stringify(clinicData)
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to update clinic');
-  }
-
-  return response.json();
+  return apiClient.put<Clinic>(`/api/clinic/${clinicId}`, clinicData, { token });
 }
 
 export async function deleteClinic(
@@ -147,39 +88,12 @@ export async function deleteClinic(
   clinicId: string, 
   softDelete = true
 ): Promise<any> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/clinic/${clinicId}?soft_delete=${softDelete}`,
-    {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'ngrok-skip-browser-warning': '1'
-      }
-    }
+  return apiClient.delete<any>(
+    `/api/clinic/${clinicId}?soft_delete=${softDelete}`,
+    { token }
   );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to delete clinic');
-  }
-
-  return response.json();
 }
 
 export async function searchClinics(searchTerm: string): Promise<Clinic[]> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/clinic/search/${encodeURIComponent(searchTerm)}`,
-    {
-      headers: {
-        'ngrok-skip-browser-warning': '1'
-      }
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to search clinics');
-  }
-
-  return response.json();
+  return apiClient.get<Clinic[]>(`/api/clinic/search/${encodeURIComponent(searchTerm)}`);
 } 

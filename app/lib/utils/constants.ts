@@ -32,11 +32,11 @@ export const CONTACT_INFO = {
 /**
  * API configuration
  */
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://bird-faithful-hagfish.ngrok-free.app';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
 // API Endpoints
 export const API_ENDPOINTS = {
-  DIAGNOSIS: '/api/diagnosis/analyze',
+  DIAGNOSIS: '/api/diagnosis/image-only-multi-turn',
   DISEASES: '/api/diseases',
   CLINICS: '/api/clinics',
   ARTICLES: '/api/articles',

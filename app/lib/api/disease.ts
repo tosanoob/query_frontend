@@ -1,4 +1,6 @@
 import { API_BASE_URL } from '@/app/lib/utils/constants';
+import { PaginatedResponse } from './types';
+import { apiClient } from './apiClient';
 
 interface DiseaseImage {
   id: string;
@@ -63,82 +65,28 @@ export interface DiseaseUpdate {
 
 export async function getDiseases(
   skip = 0, 
-  limit = 100,
-  token?: string
-): Promise<Disease[]> {
-  const headers: Record<string, string> = {
-    'ngrok-skip-browser-warning': '1'
-  };
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  const response = await fetch(
-    `${API_BASE_URL}/api/diseases/?skip=${skip}&limit=${limit}`,
-    { headers }
+  limit = 10,
+  token?: string,
+  active_only: boolean = true
+): Promise<PaginatedResponse<Disease>> {
+  return apiClient.get<PaginatedResponse<Disease>>(
+    `/api/diseases/?skip=${skip}&limit=${limit}&active_only=${active_only}`,
+    { token }
   );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to fetch diseases');
-  }
-
-  return response.json();
 }
 
 export async function getDisease(
   diseaseId: string,
   token?: string
 ): Promise<Disease> {
-  const headers: Record<string, string> = {
-    'ngrok-skip-browser-warning': '1'
-  };
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  const response = await fetch(
-    `${API_BASE_URL}/api/diseases/${diseaseId}`,
-    { headers }
-  );
-
-  if (!response.ok) {
-    if (response.status === 404) {
-      throw new Error('Disease not found');
-    }
-    
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to fetch disease');
-  }
-
-  return response.json();
+  return apiClient.get<Disease>(`/api/diseases/${diseaseId}`, { token });
 }
 
 export async function createDisease(
   token: string, 
   diseaseData: DiseaseCreate
 ): Promise<Disease> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/diseases/`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'ngrok-skip-browser-warning': '1'
-      },
-      body: JSON.stringify(diseaseData)
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to create disease');
-  }
-
-  return response.json();
+  return apiClient.post<Disease>('/api/diseases/', diseaseData, { token });
 }
 
 export async function updateDisease(
@@ -146,25 +94,7 @@ export async function updateDisease(
   diseaseId: string, 
   diseaseData: DiseaseUpdate
 ): Promise<Disease> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/diseases/${diseaseId}`,
-    {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-        'ngrok-skip-browser-warning': '1'
-      },
-      body: JSON.stringify(diseaseData)
-    }
-  );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to update disease');
-  }
-
-  return response.json();
+  return apiClient.put<Disease>(`/api/diseases/${diseaseId}`, diseaseData, { token });
 }
 
 export async function deleteDisease(
@@ -172,46 +102,31 @@ export async function deleteDisease(
   diseaseId: string, 
   softDelete = true
 ): Promise<any> {
-  const response = await fetch(
-    `${API_BASE_URL}/api/diseases/${diseaseId}?soft_delete=${softDelete}`,
-    {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'ngrok-skip-browser-warning': '1'
-      }
-    }
+  return apiClient.delete<any>(
+    `/api/diseases/${diseaseId}?soft_delete=${softDelete}`,
+    { token }
   );
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to delete disease');
-  }
-
-  return response.json();
 }
 
 export async function searchDiseases(
   searchTerm: string,
   token?: string
 ): Promise<Disease[]> {
-  const headers: Record<string, string> = {
-    'ngrok-skip-browser-warning': '1'
-  };
-  
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  
-  const response = await fetch(
-    `${API_BASE_URL}/api/diseases/search/${encodeURIComponent(searchTerm)}`,
-    { headers }
+  return apiClient.get<Disease[]>(
+    `/api/diseases/search/${encodeURIComponent(searchTerm)}`,
+    { token }
   );
+}
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.detail || 'Failed to search diseases');
-  }
-
-  return response.json();
+export async function getDiseasesByDomain(
+  domainId: string,
+  skip = 0,
+  limit = 10,
+  token?: string,
+  active_only: boolean = true
+): Promise<PaginatedResponse<Disease>> {
+  return apiClient.get<PaginatedResponse<Disease>>(
+    `/api/diseases/domain/${domainId}?skip=${skip}&limit=${limit}&active_only=${active_only}`,
+    { token }
+  );
 } 

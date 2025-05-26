@@ -13,19 +13,28 @@ export default function ArticlesPage() {
   const { token } = useAuth();
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const itemsPerPage = 10;
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
   const router = useRouter();
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
 
   const loadArticles = async (page = 1) => {
     setIsLoading(true);
     setError(null);
     try {
-      const skip = (page - 1) * itemsPerPage;
-      const data = await getArticles(skip, itemsPerPage, token || undefined);
-      setArticles(data);
-      // In a real app, you'd get total count from API
-      // This is a placeholder for pagination logic
-      setTotalPages(Math.ceil(data.length > 0 ? 20 : 0 / itemsPerPage));
+      const skip = (page - 1) * 10;
+      const response = await getArticles(skip, 10, token || undefined);
+      setArticles(response.items);
+      setTotalPages(response.pagination.pages);
+      setHasNext(response.pagination.has_next);
+      setHasPrev(response.pagination.has_prev);
       setCurrentPage(page);
     } catch (err) {
       setError((err as Error).message || 'Failed to load articles');
@@ -41,17 +50,22 @@ export default function ArticlesPage() {
     }
   }, [token, currentPage]);
 
-  const handleDelete = async (id: string) => {
-    if (!token) return;
+  const confirmDelete = (id: string) => {
+    setDeleteId(id);
+    setShowDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteId || !token) return;
     
-    if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
-      try {
-        await deleteArticle(token, id);
-        loadArticles(currentPage);
-      } catch (err) {
-        setError((err as Error).message || 'Failed to delete article');
-        console.error(err);
-      }
+    try {
+      await deleteArticle(token, deleteId);
+      setShowDeleteModal(false);
+      setDeleteId(null);
+      loadArticles(currentPage); // Refresh list
+    } catch (err) {
+      setError((err as Error).message || 'Failed to delete article');
+      console.error(err);
     }
   };
 
@@ -68,12 +82,12 @@ export default function ArticlesPage() {
   };
 
   return (
-    <div>
+    <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-700 text-primary">Quản lý Bài viết</h1>
         <Link
           href="/admin/articles/create"
-          className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark transition-colors"
+          className="px-4 py-2 bg-primary text-indigo-700 rounded-md hover:bg-primary-dark transition-colors"
         >
           Tạo bài đăng mới
         </Link>
@@ -153,7 +167,10 @@ export default function ArticlesPage() {
                             Sửa
                           </Link>
                           <button
-                            onClick={() => handleDelete(article.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              confirmDelete(article.id);
+                            }}
                             className="text-red-600 hover:text-red-900"
                           >
                             Xóa
@@ -173,30 +190,76 @@ export default function ArticlesPage() {
             </table>
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex justify-center mt-6">
-              <nav className="flex items-center">
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="px-3 py-1 rounded-md mr-2 bg-white border border-gray-300 text-sm disabled:opacity-50"
-                >
-                  Trước
-                </button>
-                <span className="px-4 py-1 text-sm text-gray-700">
-                  Trang {currentPage} / {totalPages}
-                </span>
-                <button
-                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="px-3 py-1 rounded-md ml-2 bg-white border border-gray-300 text-sm disabled:opacity-50"
-                >
-                  Sau
-                </button>
-              </nav>
-            </div>
-          )}
+          <div className="mt-4 flex justify-center items-center space-x-2">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={!hasPrev}
+              className="px-3 py-1 text-gray-800 rounded border disabled:opacity-50"
+            >
+              Trước
+            </button>
+            <span className="text-gray-800 text-sm">
+              Trang {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => prev + 1)}
+              disabled={!hasNext}
+              className="px-3 py-1 text-gray-800 rounded border disabled:opacity-50"
+            >
+              Tiếp
+            </button>
+          </div>
         </>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center">
+          <div 
+            className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" 
+            onClick={() => setShowDeleteModal(false)}
+          ></div>
+          <div className="relative bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:max-w-lg sm:w-full">
+            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+              <div className="sm:flex sm:items-start">
+                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+                  <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    Xác nhận xóa
+                  </h3>
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-700">
+                      Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete();
+                }}
+                className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm"
+              >
+                Xóa
+              </button>
+              <button
+                type="button"
+                className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                onClick={() => setShowDeleteModal(false)}
+              >
+                Hủy
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
