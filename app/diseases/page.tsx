@@ -171,7 +171,7 @@ export default function DiseasesPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">Danh mục bệnh da liễu</h1>
+        <h1 className="text-3xl font-bold mb-4 text-blue-700">Danh mục bệnh da liễu</h1>
         <p className="text-gray-600 max-w-3xl">
           Khám phá thông tin chi tiết về các loại bệnh da liễu. Tìm hiểu về triệu chứng, nguyên nhân, 
           và cách chăm sóc da phù hợp với từng loại bệnh.

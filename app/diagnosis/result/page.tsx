@@ -474,8 +474,8 @@ export default function DiagnosisResultPage() {
     <div className="container mx-auto px-4 py-6">
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-100 mb-2">Kết quả chẩn đoán</h1>
-          <p className="text-gray-300">Dựa trên hình ảnh và thông tin đã cung cấp</p>
+          <h1 className="text-2xl font-bold text-blue-700 mb-2">Kết quả chẩn đoán</h1>
+          <p className="text-blue-500">Dựa trên hình ảnh và thông tin đã cung cấp</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 h-[calc(100vh-200px)]">

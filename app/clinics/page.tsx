@@ -41,7 +41,7 @@ export default function ClinicsPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">Danh sách phòng khám</h1>
+        <h1 className="text-3xl font-bold text-blue-700 mb-4">Danh sách phòng khám</h1>
         <p className="text-gray-600 max-w-3xl">
           Danh sách các phòng khám uy tín chuyên khoa da liễu. Các cơ sở y tế được liệt kê dưới đây
           đều có đội ngũ bác sĩ giàu kinh nghiệm và thiết bị hiện đại.

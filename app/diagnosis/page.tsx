@@ -285,7 +285,7 @@ export default function DiagnosisPage() {
     <div className="container mx-auto px-4 py-10">
       <div className="max-w-3xl mx-auto">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-white-900 mb-4">
+          <h1 className="text-3xl font-bold text-blue-700 mb-4">
             Chẩn đoán bệnh da liễu
           </h1>
           <p className="text-gray-600">
