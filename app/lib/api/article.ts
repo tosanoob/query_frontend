@@ -22,15 +22,12 @@ export interface Article {
   id: string;
   title: string;
   content: string;
-  author: string | null;
   created_at: string | null;
   updated_at: string | null;
   deleted_at: string | null;
   created_by: string | null;
   updated_by: string | null;
   deleted_by: string | null;
-  published: boolean;
-  slug: string;
   summary?: string;
   creator?: {
     user_id: string;
@@ -45,19 +42,13 @@ export interface Article {
 export interface ArticleCreate {
   title: string;
   content: string;
-  author?: string | null;
   created_by?: string | null;
-  published?: boolean;
-  slug?: string;
 }
 
 export interface ArticleUpdate {
   title?: string | null;
   content?: string | null;
-  author?: string | null;
   updated_by?: string | null;
-  published?: boolean | null;
-  slug?: string | null;
 }
 
 export async function getArticles(

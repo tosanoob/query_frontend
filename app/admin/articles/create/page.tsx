@@ -15,15 +15,6 @@ export default function CreateArticlePage() {
   const { token, user } = useAuth();
   const router = useRouter();
 
-  const generateSlug = (title: string) => {
-    if (!title) return '';
-    
-    return title
-      .toLowerCase()
-      .replace(/[^\w\s]/gi, '')
-      .replace(/\s+/g, '-');
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -41,13 +32,10 @@ export default function CreateArticlePage() {
     setError(null);
     
     try {
-      const generatedSlug = generateSlug(title);
-      
       const articleData: ArticleCreate = {
         title,
         content,
         created_by: user?.id,
-        slug: generatedSlug,
       };
       
       await createArticle(token, articleData);

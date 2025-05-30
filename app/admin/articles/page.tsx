@@ -75,7 +75,8 @@ export default function ArticlesPage() {
     
     // Only navigate if the article is not deleted
     if (!article.deleted_at && article.id) {
-      router.push(`/articles/${article.id}`);
+      // Open public article page in new tab
+      window.open(`/articles/${article.id}`, '_blank');
     } else {
       alert('Bài viết này không thể xem do đã bị xóa.');
     }
@@ -140,10 +141,10 @@ export default function ArticlesPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           !article.deleted_at 
-                            ? 'bg-green-100 text-green-800' 
+                            ? 'bg-blue-100 text-blue-800' 
                             : 'bg-red-100 text-red-800'
                         }`}>
-                          {!article.deleted_at ? 'Đang hiển thị' : 'Đã xóa'}
+                          {!article.deleted_at ? 'Hoạt động' : 'Đã xóa'}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -151,14 +152,22 @@ export default function ArticlesPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                         <div className="flex justify-center space-x-2">
+                          <Link
+                            href={`/admin/articles/${article.id}`}
+                            className={`text-blue-600 hover:text-blue-900 ${
+                              article.deleted_at ? 'opacity-50 cursor-not-allowed pointer-events-none' : ''
+                            }`}
+                          >
+                            Chi tiết
+                          </Link>
                           <a
                             href="#"
                             onClick={(e) => handleViewArticle(e, article)}
-                            className={`text-blue-600 hover:text-blue-900 ${
+                            className={`text-green-600 hover:text-green-900 ${
                               article.deleted_at ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
                           >
-                            Xem
+                            Xem công khai
                           </a>
                           <Link
                             href={`/admin/articles/${article.id}/edit`}

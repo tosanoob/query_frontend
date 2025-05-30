@@ -18,9 +18,7 @@ export default function ArticleDisplay({ articleId }: ArticleDisplayProps) {
     id: string;
     title: string;
     content: string;
-    author: string | null;
     created_at: string | null;
-    published?: boolean;
     images?: { 
       image: { base_url: string; rel_path: string };
       usage: string;
@@ -49,13 +47,7 @@ export default function ArticleDisplay({ articleId }: ArticleDisplayProps) {
         
         console.log('Article data:', data);
         
-        // Chỉ chuyển hướng nếu bài viết không được public và user không phải admin
-        // và nếu trường published tồn tại
-        if (data.published === false && !isAdmin) {
-          router.push('/');
-          return;
-        }
-        
+        // Không cần kiểm tra published nữa vì không có trường này
         setArticle(data);
         setIsLoading(false);
       } catch (err) {
@@ -150,18 +142,6 @@ export default function ArticleDisplay({ articleId }: ArticleDisplayProps) {
         
         {/* Article Card */}
         <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-          {/* Draft Notice */}
-          {article.published === false && (
-            <div className="bg-yellow-50 border-b border-yellow-200 text-yellow-800 px-6 py-3">
-              <div className="flex items-center">
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-                <span className="font-medium">Bài viết đang ở chế độ không công khai. Chỉ quản trị viên mới có thể xem.</span>
-              </div>
-            </div>
-          )}
-
           {/* Article Header */}
           <div className="p-8">
             {/* Featured Image */}

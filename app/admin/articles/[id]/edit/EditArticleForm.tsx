@@ -13,7 +13,6 @@ interface EditArticleFormProps {
 export default function EditArticleForm({ articleId }: EditArticleFormProps) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [published, setPublished] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +29,6 @@ export default function EditArticleForm({ articleId }: EditArticleFormProps) {
         const article = await getArticle(articleId, token);
         setTitle(article.title);
         setContent(article.content);
-        setPublished(article.published);
         setIsLoading(false);
       } catch (err) {
         setError((err as Error).message || 'Failed to fetch article');
@@ -63,7 +61,6 @@ export default function EditArticleForm({ articleId }: EditArticleFormProps) {
         title,
         content,
         updated_by: user?.id,
-        published,
       };
       
       await updateArticle(token, articleId, articleData);

@@ -82,7 +82,7 @@ export default function ArticlesListPage() {
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {articles.map((article) => (
-                <Link key={article.id} href={`/articles/${article.slug || article.id}`}>
+                <Link key={article.id} href={`/articles/${article.id}`}>
                   <div className="bg-white shadow-md rounded-lg overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
                     {article.images && article.images.length > 0 && (
                       <div className="relative h-48 w-full">
@@ -102,7 +102,6 @@ export default function ArticlesListPage() {
                         {article.title}
                       </h2>
                       <div className="text-sm text-gray-500 mb-3">
-                        {article.author && <span>By {article.author} · </span>}
                         <span>{formatDate(article.created_at)}</span>
                       </div>
                       <div className="text-gray-600">

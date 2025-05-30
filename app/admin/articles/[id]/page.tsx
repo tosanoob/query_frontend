@@ -3,37 +3,38 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/app/lib/context/AuthContext';
-import { Disease, getDisease, deleteDisease } from '@/app/lib/api/disease';
+import { Article, getArticle, deleteArticle } from '@/app/lib/api/article';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
+import { getFullImageUrl } from '@/app/lib/utils/constants';
 
-export default function DiseaseDetail({ params }: { params: Promise<{ id: string }> }) {
+export default function ArticleDetail({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { token } = useAuth();
   const resolvedParams = use(params);
   const id = resolvedParams.id;
   
-  const [disease, setDisease] = useState<Disease | null>(null);
+  const [article, setArticle] = useState<Article | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   
   useEffect(() => {
-    const fetchDiseaseData = async () => {
-      if (!token || !id) return;
+    const fetchArticleData = async () => {
+      if (!id) return;
       
       try {
-        const diseaseData = await getDisease(id, token);
-        setDisease(diseaseData);
+        const articleData = await getArticle(id, token || undefined);
+        setArticle(articleData);
       } catch (err) {
-        setError((err as Error).message || 'Không thể tải thông tin bệnh');
-        console.error('Error fetching disease:', err);
+        setError((err as Error).message || 'Không thể tải thông tin bài viết');
+        console.error('Error fetching article:', err);
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchDiseaseData();
+    fetchArticleData();
   }, [id, token]);
   
   const handleDelete = async () => {
@@ -43,10 +44,10 @@ export default function DiseaseDetail({ params }: { params: Promise<{ id: string
     }
     
     try {
-      await deleteDisease(token, id);
-      router.push('/admin/diseases');
+      await deleteArticle(token, id);
+      router.push('/admin/articles');
     } catch (err) {
-      setError((err as Error).message || 'Lỗi khi xóa bệnh');
+      setError((err as Error).message || 'Lỗi khi xóa bài viết');
       setShowDeleteModal(false);
     }
   };
@@ -59,12 +60,12 @@ export default function DiseaseDetail({ params }: { params: Promise<{ id: string
     );
   }
   
-  if (!disease && !isLoading) {
+  if (!article && !isLoading) {
     return (
       <div className="bg-red-50 text-red-600 p-4 rounded-md">
-        <p>Không tìm thấy bệnh với ID: {id}</p>
+        <p>Không tìm thấy bài viết với ID: {id}</p>
         <Link 
-          href="/admin/diseases"
+          href="/admin/articles"
           className="text-primary hover:underline mt-2 inline-block"
         >
           &larr; Quay lại danh sách
@@ -76,10 +77,10 @@ export default function DiseaseDetail({ params }: { params: Promise<{ id: string
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl text-gray-700 font-bold">{disease?.label}</h1>
+        <h1 className="text-2xl text-gray-700 font-bold">Chi tiết bài viết</h1>
         <div className="flex space-x-3">
           <Link
-            href="/admin/diseases"
+            href="/admin/articles"
             className="text-gray-600 hover:text-gray-900"
           >
             &larr; Quay lại danh sách
@@ -96,65 +97,39 @@ export default function DiseaseDetail({ params }: { params: Promise<{ id: string
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
           <div className="md:col-span-9">
-            <h2 className="text-lg text-gray-700 font-semibold mb-4">Thông tin chung</h2>
+            <h2 className="text-lg text-gray-700 font-semibold mb-4">Thông tin bài viết</h2>
             
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div>
-                <p className="text-sm text-gray-500">Tên bệnh</p>
-                <p className="text-gray-700 font-medium">{disease?.label}</p>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">{article?.title}</h3>
               </div>
               
-              <div>
-                <p className="text-sm text-gray-500">Mô tả</p>
-                <p className="text-gray-700 whitespace-pre-line">{disease?.description || 'Không có mô tả'}</p>
-              </div>
+              {article?.summary && (
+                <div>
+                  <p className="text-sm text-gray-500 mb-2">Tóm tắt</p>
+                  <p className="text-gray-700 italic bg-gray-50 p-3 rounded-md">{article.summary}</p>
+                </div>
+              )}
               
               <div>
-                <p className="text-sm text-gray-500">Domain</p>
-                {disease?.domain ? (
-                  <div>
-                    <p className="text-gray-700">{disease.domain.domain}</p>
-                    {disease.domain.description && (
-                      <p className="text-gray-700 text-sm text-gray-500 mt-1">{disease.domain.description}</p>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-gray-700">Không có domain</p>
-                )}
+                <p className="text-sm text-gray-500 mb-2">Nội dung</p>
+                <div className="prose max-w-none text-gray-700 bg-gray-50 p-4 rounded-md whitespace-pre-line">
+                  <div dangerouslySetInnerHTML={{ __html: article?.content || '' }} />
+                </div>
               </div>
             </div>
           </div>
           
           <div className="md:col-span-3">
-            <h2 className="text-lg text-gray-700 font-semibold mb-4">Thông tin thêm</h2>
+            <h2 className="text-lg text-gray-700 font-semibold mb-4">Thông tin quản trị</h2>
             
             <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-500">Sử dụng trong chẩn đoán</p>
-                <span
-                  className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                    disease?.included_in_diagnosis
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}
-                >
-                  {disease?.included_in_diagnosis ? 'Có' : 'Không'}
-                </span>
-              </div>
-              
-              <div>
-                <p className="text-sm text-gray-500">Bài viết liên quan</p>
-                {disease?.article_id ? (
-                  <Link
-                    href={`/admin/articles/${disease.article_id}`}
-                    className="text-primary hover:underline"
-                  >
-                    Xem bài viết (ID: {disease.article_id})
-                  </Link>
-                ) : (
-                  <p className="text-gray-700">Không có bài viết liên quan</p>
-                )}
-              </div>
+              {article?.creator && (
+                <div>
+                  <p className="text-sm text-gray-500">Người tạo</p>
+                  <p className="text-gray-700">{article.creator.username}</p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -165,25 +140,44 @@ export default function DiseaseDetail({ params }: { params: Promise<{ id: string
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <p className="text-sm text-gray-500">Ngày tạo</p>
-              <p className="text-gray-700">{disease?.created_at ? new Date(disease.created_at).toLocaleDateString('vi-VN') : 'N/A'}</p>
+              <p className="text-gray-700">{article?.created_at ? new Date(article.created_at).toLocaleDateString('vi-VN') : 'N/A'}</p>
             </div>
             
             <div>
               <p className="text-sm text-gray-500">Cập nhật lần cuối</p>
-              <p className="text-gray-700">{disease?.updated_at ? new Date(disease.updated_at).toLocaleDateString('vi-VN') : 'N/A'}</p>
+              <p className="text-gray-700">{article?.updated_at ? new Date(article.updated_at).toLocaleDateString('vi-VN') : 'N/A'}</p>
             </div>
             
             <div>
               <p className="text-sm text-gray-500">ID</p>
-              <p className="text-gray-700 font-mono text-sm">{disease?.id}</p>
+              <p className="text-gray-700 font-mono text-sm">{article?.id}</p>
             </div>
           </div>
         </div>
+        
+        {/* Images section if available */}
+        {article?.images && article.images.length > 0 && (
+          <div className="border-t border-gray-200 mt-8 pt-6">
+            <h2 className="text-lg text-gray-700 font-semibold mb-4">Hình ảnh đính kèm</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {article.images.map((imageItem) => (
+                <div key={imageItem.id} className="border rounded-md p-2">
+                  <img
+                    src={getFullImageUrl(imageItem.image.base_url, imageItem.image.rel_path)}
+                    alt="Article image"
+                    className="w-full h-24 object-cover rounded-md mb-2"
+                  />
+                  <p className="text-xs text-gray-500 truncate">{imageItem.usage}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       
       <div className="flex justify-end space-x-3">
         <Link
-          href={`/admin/diseases/${id}/edit`}
+          href={`/admin/articles/${id}/edit`}
           className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
         >
           Chỉnh sửa
@@ -218,7 +212,7 @@ export default function DiseaseDetail({ params }: { params: Promise<{ id: string
                     </h3>
                     <div className="mt-2">
                       <p className="text-sm text-gray-500">
-                        Bạn có chắc chắn muốn xóa bệnh "{disease?.label}"? Hành động này không thể hoàn tác.
+                        Bạn có chắc chắn muốn xóa bài viết "{article?.title}"? Hành động này không thể hoàn tác.
                       </p>
                     </div>
                   </div>

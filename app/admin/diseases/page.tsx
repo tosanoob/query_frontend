@@ -106,6 +106,15 @@ export default function DiseasesManagement() {
     setCurrentPage(1); // Reset to first page when changing domain
   };
 
+  // Function to truncate description
+  const truncateDescription = (text: string, maxLength: number = 30): string => {
+    if (!text) return '';
+    // Remove newlines and extra spaces for better display in table
+    const cleanText = text.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+    if (cleanText.length <= maxLength) return cleanText;
+    return cleanText.substring(0, maxLength) + '...';
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
@@ -185,8 +194,8 @@ export default function DiseasesManagement() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="font-medium text-gray-900">{disease.label}</div>
                       {disease.description && (
-                        <div className="text-sm text-gray-700 truncate max-w-xs">
-                          {disease.description}
+                        <div className="text-sm text-gray-700 max-w-xs">
+                          {truncateDescription(disease.description)}
                         </div>
                       )}
                     </td>
