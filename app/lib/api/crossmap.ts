@@ -24,6 +24,11 @@ export interface StandardCrossmapUpdate {
   }[];
 }
 
+export interface CrossmapImport {
+  mappings: Record<string, string>;
+  target_domain_name: string;
+}
+
 export async function getCrossmapsBetweenDomains(
   domainId1: string,
   domainId2: string,
@@ -41,6 +46,17 @@ export async function updateStandardCrossmaps(
 ): Promise<any> {
   return apiClient.post<any>(
     '/api/crossmaps/batch/standard',
+    data,
+    { token }
+  );
+}
+
+export async function importCrossmaps(
+  token: string,
+  data: CrossmapImport
+): Promise<any> {
+  return apiClient.post<any>(
+    '/api/crossmaps/import',
     data,
     { token }
   );

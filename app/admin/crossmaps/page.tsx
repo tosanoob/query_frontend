@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/app/lib/context/AuthContext';
 import { Disease, getDiseasesByDomain } from '@/app/lib/api/disease';
 import { Domain, getDomains } from '@/app/lib/api/domain';
-import { Crossmap, getCrossmapsBetweenDomains, updateStandardCrossmaps } from '@/app/lib/api/crossmap';
+import { Crossmap, getCrossmapsBetweenDomains, updateStandardCrossmaps, importCrossmaps } from '@/app/lib/api/crossmap';
 import { toast } from 'react-hot-toast';
 
 export default function CrossmapsManagement() {
@@ -18,7 +18,9 @@ export default function CrossmapsManagement() {
   const [mappings, setMappings] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch domains first
   useEffect(() => {
@@ -169,6 +171,104 @@ export default function CrossmapsManagement() {
     }
   };
 
+  // Handle file import
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !token || !activeDomainId) return;
+
+    // Get current domain name
+    const currentDomain = domains.find(d => d.id === activeDomainId);
+    if (!currentDomain) return;
+
+    try {
+      setIsImporting(true);
+      
+      // Read JSON file
+      const fileContent = await file.text();
+      const jsonData = JSON.parse(fileContent);
+      
+      // Validate JSON structure - file content should be an object with disease mappings
+      if (!jsonData || typeof jsonData !== 'object' || Array.isArray(jsonData)) {
+        throw new Error('File JSON không hợp lệ: phải là object chứa ánh xạ bệnh');
+      }
+
+      // Prepare import data - use entire JSON content as mappings
+      const importData = {
+        mappings: jsonData,
+        target_domain_name: currentDomain.domain
+      };
+
+      // Call import API
+      await importCrossmaps(token, importData);
+      toast.success('Import ánh xạ thành công');
+
+      // Refresh data
+      if (standardDomain) {
+        const crossmapsResponse = await getCrossmapsBetweenDomains(activeDomainId, standardDomain.id, token);
+        setCrossmaps(crossmapsResponse);
+        
+        // Update mappings state
+        const newMappings: Record<string, string> = {};
+        crossmapsResponse.forEach(crossmap => {
+          newMappings[crossmap.source_disease_id] = crossmap.target_disease_id;
+        });
+        setMappings(newMappings);
+      }
+    } catch (err) {
+      const errorMessage = (err as Error).message || 'Lỗi khi import ánh xạ';
+      setError(errorMessage);
+      toast.error(errorMessage);
+      console.error('Error importing mappings:', err);
+    } finally {
+      setIsImporting(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Handle export mappings
+  const handleExportMappings = () => {
+    if (!activeDomainId || domainDiseases.length === 0) return;
+
+    // Get current domain name
+    const currentDomain = domains.find(d => d.id === activeDomainId);
+    if (!currentDomain) return;
+
+    // Create export data
+    const exportData: Record<string, string> = {};
+    
+    domainDiseases.forEach(disease => {
+      const standardDiseaseId = mappings[disease.id];
+      if (standardDiseaseId) {
+        const standardDisease = standardDiseases.find(std => std.id === standardDiseaseId);
+        if (standardDisease) {
+          exportData[disease.label] = standardDisease.label;
+        }
+      }
+    });
+
+    // Create and download JSON file
+    const jsonContent = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonContent], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `crossmap_${currentDomain.domain}_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    URL.revokeObjectURL(url);
+    toast.success('Xuất ánh xạ thành công');
+  };
+
   // Get mapped standard disease for a domain disease
   const getMappedStandardDisease = (domainDiseaseId: string): { id: string; label: string } | undefined => {
     const standardDiseaseId = mappings[domainDiseaseId];
@@ -230,21 +330,50 @@ export default function CrossmapsManagement() {
             <div className="p-4 bg-gray-50 border-b">
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-medium text-gray-900">Ánh xạ với Domain STANDARD</h2>
-                <button
-                  onClick={handleSaveMappings}
-                  disabled={isSaving}
-                  className={`px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 ${
-                    isSaving ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  {isSaving ? 'Đang lưu...' : 'Lưu ánh xạ'}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleImportClick}
+                    disabled={isImporting || !activeDomainId}
+                    className={`px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 ${
+                      isImporting || !activeDomainId ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {isImporting ? 'Đang tải...' : `Tải ánh xạ ${domains.find(d => d.id === activeDomainId)?.domain || ''}`}
+                  </button>
+                  <button
+                    onClick={handleExportMappings}
+                    disabled={!activeDomainId || domainDiseases.length === 0}
+                    className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 ${
+                      !activeDomainId || domainDiseases.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    Lưu ánh xạ {domains.find(d => d.id === activeDomainId)?.domain || ''}
+                  </button>
+                  <button
+                    onClick={handleSaveMappings}
+                    disabled={isSaving}
+                    className={`px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 ${
+                      isSaving ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {isSaving ? 'Đang lưu...' : 'Lưu ánh xạ'}
+                  </button>
+                </div>
               </div>
               <p className="text-sm text-gray-600 mt-1">
                 Chọn bệnh từ domain STANDARD để ánh xạ với bệnh trong domain hiện tại
               </p>
             </div>
             
+            {/* Hidden file input for import */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json"
+              onChange={handleFileImport}
+              style={{ display: 'none' }}
+            />
+
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -304,18 +433,6 @@ export default function CrossmapsManagement() {
                 )}
               </tbody>
             </table>
-          </div>
-          
-          <div className="flex justify-end">
-            <button
-              onClick={handleSaveMappings}
-              disabled={isSaving}
-              className={`px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 ${
-                isSaving ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              {isSaving ? 'Đang lưu...' : 'Lưu ánh xạ'}
-            </button>
           </div>
         </>
       )}
