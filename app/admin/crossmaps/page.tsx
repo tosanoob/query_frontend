@@ -4,8 +4,126 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/app/lib/context/AuthContext';
 import { Disease, getDiseasesByDomain } from '@/app/lib/api/disease';
 import { Domain, getDomains } from '@/app/lib/api/domain';
-import { Crossmap, getCrossmapsBetweenDomains, updateStandardCrossmaps, importCrossmaps } from '@/app/lib/api/crossmap';
+import { 
+  Crossmap, 
+  CrossmapResponse, 
+  CrossmapOneToMany, 
+  SourceDisease,
+  getCrossmapsBetweenDomains, 
+  updateStandardCrossmaps, 
+  importCrossmaps 
+} from '@/app/lib/api/crossmap';
 import { toast } from 'react-hot-toast';
+
+// Custom component kết hợp search và select
+function SearchableSelect({ 
+  options, 
+  onSelect, 
+  placeholder = "Tìm kiếm...",
+  emptyMessage = "Không có dữ liệu"
+}: { 
+  options: { id: string; label: string }[]; 
+  onSelect: (id: string) => void; 
+  placeholder?: string;
+  emptyMessage?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filteredOptions = searchText 
+    ? options.filter(option => option.label.toLowerCase().includes(searchText.toLowerCase()))
+    : options;
+
+  // Xử lý click bên ngoài để đóng dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const handleOptionClick = (id: string) => {
+    onSelect(id);
+    setSearchText('');
+    setIsOpen(false);
+  };
+
+  return (
+    <div className="relative w-full" ref={dropdownRef}>
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          className="block w-full p-2 pr-10 text-gray-800 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+          placeholder={placeholder}
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          onFocus={() => setIsOpen(true)}
+          autoComplete="off"
+        />
+        <button 
+          className="absolute inset-y-0 right-0 flex items-center px-2 text-gray-500"
+          onClick={() => {
+            setIsOpen(!isOpen);
+            if (!isOpen) {
+              inputRef.current?.focus();
+            }
+          }}
+        >
+          {searchText ? (
+            <svg 
+              onClick={(e) => {
+                e.stopPropagation();
+                setSearchText('');
+              }} 
+              className="h-5 w-5 text-gray-400 hover:text-gray-600 cursor-pointer" 
+              fill="none" 
+              viewBox="0 0 24 24" 
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          )}
+        </button>
+      </div>
+      
+      {isOpen && (
+        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-300 max-h-60 overflow-y-auto">
+          <div className="py-1 text-sm text-gray-700">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map(option => (
+                <div
+                  key={option.id}
+                  className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center"
+                  onClick={() => handleOptionClick(option.id)}
+                >
+                  <span>{option.label}</span>
+                </div>
+              ))
+            ) : (
+              <div className="px-4 py-2 text-gray-500">{emptyMessage}</div>
+            )}
+          </div>
+          <div className="px-4 py-2 text-xs text-gray-500 border-t">
+            Hiển thị {filteredOptions.length} / {options.length} bệnh
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function CrossmapsManagement() {
   const { token } = useAuth();
@@ -14,13 +132,14 @@ export default function CrossmapsManagement() {
   const [activeDomainId, setActiveDomainId] = useState<string | null>(null);
   const [domainDiseases, setDomainDiseases] = useState<Disease[]>([]);
   const [standardDiseases, setStandardDiseases] = useState<Disease[]>([]);
-  const [crossmaps, setCrossmaps] = useState<Crossmap[]>([]);
-  const [mappings, setMappings] = useState<Record<string, string>>({});
+  const [crossmapResponse, setCrossmapResponse] = useState<CrossmapResponse | null>(null);
+  const [mappings, setMappings] = useState<Record<string, string[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [searchQueries, setSearchQueries] = useState<Record<string, string>>({});
 
   // Fetch domains first
   useEffect(() => {
@@ -85,7 +204,7 @@ export default function CrossmapsManagement() {
         // Don't fetch if STANDARD domain is selected
         if (activeDomainId === standardDomain.id) {
           setDomainDiseases([]);
-          setCrossmaps([]);
+          setCrossmapResponse(null);
           setMappings({});
           return;
         }
@@ -95,16 +214,39 @@ export default function CrossmapsManagement() {
         setDomainDiseases(diseasesResponse.items);
 
         // Fetch crossmaps between active domain and STANDARD domain
-        const crossmapsResponse = await getCrossmapsBetweenDomains(activeDomainId, standardDomain.id, token);
-        setCrossmaps(crossmapsResponse);
+        const response = await getCrossmapsBetweenDomains(activeDomainId, standardDomain.id, token);
+        setCrossmapResponse(response);
 
-        // Initialize mappings based on crossmaps
-        const initialMappings: Record<string, string> = {};
-        crossmapsResponse.forEach(crossmap => {
-          // In the new format, source_disease_id is from the current domain and target_disease_id is from the STANDARD domain
-          initialMappings[crossmap.source_disease_id] = crossmap.target_disease_id;
+        // Khởi tạo mappings dựa trên dữ liệu crossmaps mới
+        const initialMappings: Record<string, string[]> = {};
+        
+        // Duyệt qua tất cả các bệnh trong domain nguồn
+        diseasesResponse.items.forEach(disease => {
+          initialMappings[disease.id] = [];
         });
+        
+        // Cập nhật mappings từ dữ liệu crossmap
+        if (response && response.crossmaps) {
+          response.crossmaps.forEach((crossmap: CrossmapOneToMany) => {
+            crossmap.source_diseases.forEach(sourceDisease => {
+              if (!initialMappings[sourceDisease.source_disease_id]) {
+                initialMappings[sourceDisease.source_disease_id] = [];
+              }
+              
+              // Thêm target disease vào danh sách ánh xạ của source disease
+              initialMappings[sourceDisease.source_disease_id].push(crossmap.target_disease_id);
+            });
+          });
+        }
+        
         setMappings(initialMappings);
+        
+        // Khởi tạo searchQueries cho mỗi bệnh
+        const initialSearchQueries: Record<string, string> = {};
+        diseasesResponse.items.forEach(disease => {
+          initialSearchQueries[disease.id] = '';
+        });
+        setSearchQueries(initialSearchQueries);
       } catch (err) {
         setError((err as Error).message || 'Không thể tải dữ liệu ánh xạ');
         console.error('Error fetching domain data:', err);
@@ -123,18 +265,54 @@ export default function CrossmapsManagement() {
   };
 
   const handleMappingChange = (domainDiseaseId: string, standardDiseaseId: string) => {
-    setMappings(prev => {
-      const updated = { ...prev };
-      
-      // If empty string is selected, remove the mapping entirely
-      if (standardDiseaseId === '') {
-        delete updated[domainDiseaseId];
-      } else {
-        updated[domainDiseaseId] = standardDiseaseId;
+    // Tạo bản sao mới của state mappings để đảm bảo React nhận biết thay đổi
+    const updatedMappings = { ...mappings };
+    
+    // Nếu chọn "Không ánh xạ", xóa tất cả ánh xạ hiện tại
+    if (standardDiseaseId === '') {
+      updatedMappings[domainDiseaseId] = [];
+    } 
+    // Nếu đã có ánh xạ này, xóa nó khỏi danh sách
+    else if (updatedMappings[domainDiseaseId]?.includes(standardDiseaseId)) {
+      updatedMappings[domainDiseaseId] = updatedMappings[domainDiseaseId].filter(id => id !== standardDiseaseId);
+    } 
+    // Nếu chưa có ánh xạ này, thêm vào danh sách
+    else {
+      if (!updatedMappings[domainDiseaseId]) {
+        updatedMappings[domainDiseaseId] = [];
       }
-      
-      return updated;
-    });
+      updatedMappings[domainDiseaseId].push(standardDiseaseId);
+    }
+    
+    // Cập nhật state một cách đồng bộ
+    setMappings(updatedMappings);
+    
+    // Reset search query sau khi chọn
+    setSearchQueries(prev => ({
+      ...prev,
+      [domainDiseaseId]: ''
+    }));
+
+    // Log để kiểm tra giá trị
+    console.log("Đã cập nhật ánh xạ:", domainDiseaseId, standardDiseaseId, updatedMappings[domainDiseaseId]);
+  };
+
+  // Xử lý thay đổi tìm kiếm
+  const handleSearchChange = (domainDiseaseId: string, searchText: string) => {
+    setSearchQueries(prev => ({
+      ...prev,
+      [domainDiseaseId]: searchText
+    }));
+  };
+
+  // Lọc bệnh tiêu chuẩn dựa trên tìm kiếm
+  const getFilteredStandardDiseases = (domainDiseaseId: string) => {
+    const searchText = searchQueries[domainDiseaseId]?.toLowerCase() || '';
+    if (!searchText) return standardDiseases;
+    
+    return standardDiseases.filter(disease => 
+      disease.label.toLowerCase().includes(searchText)
+    );
   };
 
   const handleSaveMappings = async () => {
@@ -143,13 +321,20 @@ export default function CrossmapsManagement() {
     try {
       setIsSaving(true);
       
-      // Only include diseases that have a mapping
-      const crossmapsData = Object.entries(mappings)
-        .filter(([_, standardDiseaseId]) => standardDiseaseId) // Only include non-empty mappings
-        .map(([targetDiseaseId, standardDiseaseId]) => ({
-          standard_disease_id: standardDiseaseId,
-          target_disease_id: targetDiseaseId
-        }));
+      // Chuyển đổi mappings từ dạng 1:n sang danh sách ánh xạ 1:1 để phù hợp với API
+      const crossmapsData: {
+        standard_disease_id: string;
+        target_disease_id: string;
+      }[] = [];
+
+      Object.entries(mappings).forEach(([sourceDiseaseId, targetDiseaseIds]) => {
+        targetDiseaseIds.forEach(targetDiseaseId => {
+          crossmapsData.push({
+            standard_disease_id: targetDiseaseId,
+            target_disease_id: sourceDiseaseId
+          });
+        });
+      });
       
       const updateData = {
         target_domain_id: activeDomainId,
@@ -160,8 +345,8 @@ export default function CrossmapsManagement() {
       toast.success('Cập nhật ánh xạ thành công');
       
       // Refresh crossmaps
-      const crossmapsResponse = await getCrossmapsBetweenDomains(activeDomainId, standardDomain.id, token);
-      setCrossmaps(crossmapsResponse);
+      const response = await getCrossmapsBetweenDomains(activeDomainId, standardDomain.id, token);
+      setCrossmapResponse(response);
     } catch (err) {
       setError((err as Error).message || 'Lỗi khi cập nhật ánh xạ');
       toast.error('Lỗi khi cập nhật ánh xạ');
@@ -208,14 +393,29 @@ export default function CrossmapsManagement() {
 
       // Refresh data
       if (standardDomain) {
-        const crossmapsResponse = await getCrossmapsBetweenDomains(activeDomainId, standardDomain.id, token);
-        setCrossmaps(crossmapsResponse);
+        const response = await getCrossmapsBetweenDomains(activeDomainId, standardDomain.id, token);
+        setCrossmapResponse(response);
         
-        // Update mappings state
-        const newMappings: Record<string, string> = {};
-        crossmapsResponse.forEach(crossmap => {
-          newMappings[crossmap.source_disease_id] = crossmap.target_disease_id;
+        // Cập nhật trạng thái mappings từ dữ liệu mới
+        const newMappings: Record<string, string[]> = {};
+        
+        // Khởi tạo mappings trống cho tất cả bệnh trong domain
+        domainDiseases.forEach(disease => {
+          newMappings[disease.id] = [];
         });
+        
+        // Cập nhật từ dữ liệu crossmap
+        if (response && response.crossmaps) {
+          response.crossmaps.forEach((crossmap: CrossmapOneToMany) => {
+            crossmap.source_diseases.forEach(sourceDisease => {
+              if (!newMappings[sourceDisease.source_disease_id]) {
+                newMappings[sourceDisease.source_disease_id] = [];
+              }
+              newMappings[sourceDisease.source_disease_id].push(crossmap.target_disease_id);
+            });
+          });
+        }
+        
         setMappings(newMappings);
       }
     } catch (err) {
@@ -234,21 +434,29 @@ export default function CrossmapsManagement() {
 
   // Handle export mappings
   const handleExportMappings = () => {
-    if (!activeDomainId || domainDiseases.length === 0) return;
+    if (!activeDomainId || domainDiseases.length === 0 || !crossmapResponse) return;
 
     // Get current domain name
     const currentDomain = domains.find(d => d.id === activeDomainId);
     if (!currentDomain) return;
 
-    // Create export data
-    const exportData: Record<string, string> = {};
+    // Create export data - cho định dạng 1:n
+    const exportData: Record<string, string[]> = {};
     
     domainDiseases.forEach(disease => {
-      const standardDiseaseId = mappings[disease.id];
-      if (standardDiseaseId) {
-        const standardDisease = standardDiseases.find(std => std.id === standardDiseaseId);
-        if (standardDisease) {
-          exportData[disease.label] = standardDisease.label;
+      const standardDiseaseIds = mappings[disease.id] || [];
+      if (standardDiseaseIds.length > 0) {
+        const standardDiseaseLabels: string[] = [];
+        
+        standardDiseaseIds.forEach(stdId => {
+          const stdDisease = standardDiseases.find(std => std.id === stdId);
+          if (stdDisease) {
+            standardDiseaseLabels.push(stdDisease.label);
+          }
+        });
+        
+        if (standardDiseaseLabels.length > 0) {
+          exportData[disease.label] = standardDiseaseLabels;
         }
       }
     });
@@ -269,23 +477,29 @@ export default function CrossmapsManagement() {
     toast.success('Xuất ánh xạ thành công');
   };
 
-  // Get mapped standard disease for a domain disease
-  const getMappedStandardDisease = (domainDiseaseId: string): { id: string; label: string } | undefined => {
-    const standardDiseaseId = mappings[domainDiseaseId];
-    if (!standardDiseaseId) return undefined;
+  // Get mapped standard diseases for a domain disease
+  const getMappedStandardDiseases = (domainDiseaseId: string): { id: string; label: string }[] => {
+    const standardDiseaseIds = mappings[domainDiseaseId] || [];
+    if (standardDiseaseIds.length === 0) return [];
     
-    // Find from crossmaps first (has the labels)
-    const crossmap = crossmaps.find(c => c.source_disease_id === domainDiseaseId);
-    if (crossmap) {
-      return {
-        id: crossmap.target_disease_id,
-        label: crossmap.target_disease_label
-      };
-    }
-    
-    // Fallback to finding in standardDiseases if not found in crossmaps
-    const stdDisease = standardDiseases.find(d => d.id === standardDiseaseId);
-    return stdDisease ? { id: stdDisease.id, label: stdDisease.label } : undefined;
+    return standardDiseaseIds.map(stdId => {
+      // Tìm thông tin về bệnh tiêu chuẩn từ dữ liệu crossmap
+      if (crossmapResponse && crossmapResponse.crossmaps) {
+        const crossmap = crossmapResponse.crossmaps.find(c => c.target_disease_id === stdId);
+        if (crossmap) {
+          return {
+            id: crossmap.target_disease_id,
+            label: crossmap.target_disease_label
+          };
+        }
+      }
+      
+      // Fallback: tìm trong danh sách bệnh tiêu chuẩn
+      const stdDisease = standardDiseases.find(d => d.id === stdId);
+      return stdDisease 
+        ? { id: stdDisease.id, label: stdDisease.label } 
+        : { id: stdId, label: 'Không xác định' };
+    });
   };
 
   return (
@@ -361,7 +575,7 @@ export default function CrossmapsManagement() {
                 </div>
               </div>
               <p className="text-sm text-gray-600 mt-1">
-                Chọn bệnh từ domain STANDARD để ánh xạ với bệnh trong domain hiện tại
+                Chọn bệnh từ domain STANDARD để ánh xạ với bệnh trong domain hiện tại. Mỗi bệnh có thể ánh xạ tới nhiều bệnh tiêu chuẩn.
               </p>
             </div>
             
@@ -406,26 +620,56 @@ export default function CrossmapsManagement() {
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        <select
-                          value={mappings[disease.id] || ''}
-                          onChange={(e) => handleMappingChange(disease.id, e.target.value)}
-                          className="block w-full p-2 text-gray-800 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                        >
-                          <option value="">-- Không ánh xạ (bỏ ánh xạ) --</option>
-                          {standardDiseases.map((stdDisease) => (
-                            <option key={stdDisease.id} value={stdDisease.id}>
-                              {stdDisease.label}
-                            </option>
-                          ))}
-                        </select>
-                        {getMappedStandardDisease(disease.id) ? (
-                          <div className="mt-1 text-sm text-gray-600">
-                            Ánh xạ hiện tại: {getMappedStandardDisease(disease.id)?.label}
-                          </div>
-                        ) : (
-                          <div className="mt-1 text-sm text-amber-600">
-                            Chưa có ánh xạ
-                          </div>
+                        <div className="mb-2">
+                          {/* Thay thế search box và select box bằng SearchableSelect */}
+                          <SearchableSelect
+                            options={standardDiseases}
+                            onSelect={(id) => handleMappingChange(disease.id, id)}
+                            placeholder="Tìm và chọn bệnh tiêu chuẩn để thêm ánh xạ..."
+                            emptyMessage="Không tìm thấy bệnh phù hợp"
+                          />
+                        </div>
+                        
+                        {/* Hiển thị danh sách các bệnh đã được ánh xạ */}
+                        <div className="mt-2">
+                          <h4 className="text-sm font-medium text-gray-700 mb-1">
+                            Các ánh xạ hiện tại: 
+                            <span className="ml-1 font-normal text-gray-500">
+                              ({(mappings[disease.id] || []).length} bệnh)
+                            </span>
+                          </h4>
+                          {(mappings[disease.id] || []).length > 0 ? (
+                            <ul className="space-y-1 max-h-40 overflow-y-auto">
+                              {getMappedStandardDiseases(disease.id).map(stdDisease => (
+                                <li key={stdDisease.id} className="flex items-center gap-2 py-1 px-2 rounded hover:bg-gray-50">
+                                  <button
+                                    onClick={() => handleMappingChange(disease.id, stdDisease.id)}
+                                    className="text-red-500 hover:text-red-700 flex-shrink-0"
+                                    title="Xóa ánh xạ này"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
+                                  <span className="text-sm text-gray-800 break-words">{stdDisease.label}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <div className="text-sm text-amber-600 py-1">
+                              Chưa có ánh xạ
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Nút xóa tất cả ánh xạ của bệnh này */}
+                        {(mappings[disease.id] || []).length > 0 && (
+                          <button
+                            onClick={() => handleMappingChange(disease.id, '')}
+                            className="mt-2 px-2 py-1 text-xs text-red-600 hover:text-red-800 border border-red-200 rounded hover:bg-red-50"
+                          >
+                            Xóa tất cả ánh xạ
+                          </button>
                         )}
                       </td>
                     </tr>
