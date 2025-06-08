@@ -272,34 +272,8 @@ export default function DiagnosisResultPage() {
   }, []);
 
   const renderProbabilityBar = (probability: number) => {
-    const percentage = Math.round(probability * 100);
-    
-    let colorClass;
-    if (percentage >= 70) {
-      colorClass = 'bg-red-500';
-    } else if (percentage >= 40) {
-      colorClass = 'bg-yellow-500';
-    } else {
-      colorClass = 'bg-blue-400';
-    }
-    
-    return (
-      <div className="flex items-center w-full">
-        <div className="flex-grow">
-          <div className="w-full bg-gray-200 rounded-full h-3">
-            <div
-              className={`${colorClass} h-3 rounded-full transition-all duration-500 ease-in-out`}
-              style={{ width: `${percentage}%` }}
-            ></div>
-          </div>
-        </div>
-        <div className="ml-3 w-12 text-right">
-          <span className="text-sm font-medium text-gray-700">
-            {percentage}%
-          </span>
-        </div>
-      </div>
-    );
+    // Không hiển thị thanh tiến trình và % nữa
+    return null;
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -526,7 +500,7 @@ export default function DiagnosisResultPage() {
                     const diseaseInfo = getDiseaseInfo(disease.name);
                     return (
                       <div key={index} className="p-2 border border-gray-100 rounded">
-                        <div className="flex justify-between items-center mb-1">
+                        <div className="flex justify-between items-center">
                           {diseaseInfo.disease ? (
                             <Link 
                               href={ROUTES.DISEASE_DETAIL(diseaseInfo.disease.id)}
@@ -538,7 +512,7 @@ export default function DiagnosisResultPage() {
                             <span className="font-medium text-sm text-gray-800">{diseaseInfo.displayName}</span>
                           )}
                         </div>
-                        {renderProbabilityBar(disease.score)}
+                        {/* Đã ẩn thanh hiển thị tỉ lệ */}
                       </div>
                     );
                   })}
