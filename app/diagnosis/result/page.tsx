@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { API_BASE_URL, API_ENDPOINTS, ROUTES } from '../../lib/utils/constants';
 import { Disease as DiseaseInfo } from '../../lib/api/disease';
 import { Domain } from '../../lib/api/domain';
@@ -53,6 +55,53 @@ export default function DiagnosisResultPage() {
   const [cacheLoaded, setCacheLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Thêm style cho markdown
+  const markdownStyles = `
+    /* Base styles for all markdown */
+    .markdown h1 { font-size: 1.5rem; font-weight: bold; margin-bottom: 0.5rem; }
+    .markdown h2 { font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem; }
+    .markdown h3 { font-size: 1.1rem; font-weight: bold; margin-bottom: 0.5rem; }
+    .markdown p { margin-bottom: 0.5rem; }
+    .markdown ul { list-style-type: disc; padding-left: 1rem; margin-bottom: 0.5rem; }
+    .markdown ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.5rem; }
+    .markdown li { margin-bottom: 0.25rem; }
+    .markdown code { padding: 0.1rem 0.2rem; border-radius: 0.2rem; }
+    .markdown pre { padding: 0.5rem; border-radius: 0.2rem; overflow-x: auto; margin-bottom: 0.5rem; }
+    .markdown blockquote { padding-left: 0.5rem; margin-left: 0.5rem; margin-bottom: 0.5rem; }
+    .markdown hr { margin: 0.5rem 0; border: 0; }
+    .markdown strong { font-weight: bold; }
+    .markdown em { font-style: italic; }
+    .markdown table { border-collapse: collapse; margin-bottom: 0.5rem; }
+    .markdown th, .markdown td { padding: 0.25rem 0.5rem; }
+    
+    /* Giữ nguyên xuống dòng và không áp dụng white-space: pre-line */
+    .whitespace-pre-line { white-space: pre-wrap !important; }
+    
+    /* User message (blue background) specific styles */
+    .user-message code { background-color: rgba(255, 255, 255, 0.2); color: white; }
+    .user-message pre { background-color: rgba(255, 255, 255, 0.1); }
+    .user-message blockquote { border-left: 3px solid rgba(255, 255, 255, 0.4); }
+    .user-message hr { border-top: 1px solid rgba(255, 255, 255, 0.2); }
+    .user-message a { color: white; text-decoration: underline; }
+    .user-message th, .user-message td { border: 1px solid rgba(255, 255, 255, 0.2); }
+    .user-message th { background-color: rgba(255, 255, 255, 0.1); }
+    
+    /* Assistant message (gray background) specific styles */
+    .assistant-message code { background-color: rgba(0, 0, 0, 0.1); }
+    .assistant-message pre { background-color: rgba(0, 0, 0, 0.05); }
+    .assistant-message blockquote { border-left: 3px solid rgba(0, 0, 0, 0.2); }
+    .assistant-message hr { border-top: 1px solid rgba(0, 0, 0, 0.1); }
+    .assistant-message a { color: #3B82F6; text-decoration: underline; }
+    .assistant-message th, .assistant-message td { border: 1px solid rgba(0, 0, 0, 0.1); }
+    .assistant-message th { background-color: rgba(0, 0, 0, 0.05); }
+    
+    /* Đảm bảo khối nội dung không đè lên nhau */
+    .markdown * { max-width: 100%; }
+    
+    /* Đảm bảo xuống dòng đúng trong các thẻ p */
+    .markdown p { white-space: pre-wrap; }
+  `;
 
   // Get cache instance
   const diseaseCache = DiseaseCacheManager.getInstance();
@@ -132,43 +181,57 @@ export default function DiagnosisResultPage() {
     }
   };
 
+  // Chuyển đổi văn bản thường thành định dạng markdown hợp lệ
+  const convertToValidMarkdown = (text: string): string => {
+    // Chỉ xử lý các trường hợp đặc biệt mà không làm mất các dấu xuống dòng khác
+    let processed = text
+        // Làm tương tự cho các bullet không nằm ở đầu văn bản (nằm sau một dòng khác)
+      .replace(/(\n\s*[*+-])\s*\n+/g, '$1 ')
+      // Bạn vẫn có thể giữ lại các quy tắc sửa lỗi cụ thể khác nếu cần
+      .replace(/\*\*([^*\n]+)\*\*\s*\n+\s*\(([^)]+)\)/g, '**$1 ($2)**');
+    
+    return processed;
+  };
+
   // Helper function to safely extract string content from any data type
   const safeExtractContent = (data: any): string => {
-    if (typeof data === 'string') {
-      return data;
-    }
-    if (typeof data === 'number') {
-      return data.toString();
-    }
-    if (data === null || data === undefined) {
-      return '';
-    }
-    if (typeof data === 'object') {
-      // If it's an array, don't render it as JSON - likely chat_history
-      if (Array.isArray(data)) {
-        return '[Dữ liệu hệ thống]';
-      }
+    // if (typeof data === 'string') {
+    //   // Chỉ xử lý một số trường hợp đặc biệt mà không làm mất định dạng gốc
+    //   return convertToValidMarkdown(data);
+    // }
+    // if (typeof data === 'number') {
+    //   return data.toString();
+    // }
+    // if (data === null || data === undefined) {
+    //   return '';
+    // }
+    // if (typeof data === 'object') {
+    //   // If it's an array, don't render it as JSON - likely chat_history
+    //   if (Array.isArray(data)) {
+    //     return '[Dữ liệu hệ thống]';
+    //   }
       
-      // Check for common content fields first
-      if (data.content && typeof data.content === 'string') {
-        return data.content;
-      }
-      if (data.text && typeof data.text === 'string') {
-        return data.text;
-      }
-      if (data.message && typeof data.message === 'string') {
-        return data.message;
-      }
+    //   // Check for common content fields first
+    //   if (data.content && typeof data.content === 'string') {
+    //     return safeExtractContent(data.content); // Sử dụng đệ quy để xử lý nội dung
+    //   }
+    //   if (data.text && typeof data.text === 'string') {
+    //     return safeExtractContent(data.text);
+    //   }
+    //   if (data.message && typeof data.message === 'string') {
+    //     return safeExtractContent(data.message);
+    //   }
       
-      // If it's an object with type/image/mime_type, it's likely file data
-      if (data.type || data.mime_type || data.image) {
-        return '[File được đính kèm]';
-      }
+    //   // If it's an object with type/image/mime_type, it's likely file data
+    //   if (data.type || data.mime_type || data.image) {
+    //     return '[File được đính kèm]';
+    //   }
       
-      // For other objects, don't render as JSON to avoid cluttering chat
-      return '[Dữ liệu hệ thống]';
-    }
-    return String(data);
+    //   // For other objects, don't render as JSON to avoid cluttering chat
+    //   return '[Dữ liệu hệ thống]';
+    // }
+    console.log(data)
+    return data;
   };
 
   // Helper function to get disease info from cache
@@ -228,10 +291,36 @@ export default function DiagnosisResultPage() {
         
         // Then show the assistant's response
         const mainResponse = safeExtractContent(parsedResult.response || parsedResult.answer || '');
+        
+        // Định dạng lại response để hiển thị đúng Markdown
         if (mainResponse.trim()) {
+          // Thêm định dạng Markdown tự động cho các tên bệnh nếu xuất hiện trong kết quả
+          let enhancedResponse = mainResponse;
+          
+          // Định dạng cho tên các bệnh phổ biến
+          // const commonDiseases = [
+          //   'Ung thư tế bào hắc tố',
+          //   'Ung thư da',
+          //   'Sẩm da',
+          //   'Nám da',
+          //   'Đốm nâu',
+          //   'Tàn nhang',
+          //   'Bớt sắc tố',
+          //   'Dày sừng ánh sáng',
+          //   'U mạch máu',
+          //   'Viêm da'
+          // ];
+          
+          // // Tự động định dạng in đậm cho tên bệnh chưa được định dạng
+          // commonDiseases.forEach(disease => {
+          //   // Chỉ định dạng nếu chưa được đánh dấu in đậm hoặc nằm trong dấu *
+          //   const regex = new RegExp(`(?<![*])${disease}(?![*])`, 'g');
+          //   enhancedResponse = enhancedResponse.replace(regex, `**${disease}**`);
+          // });
+          
           initialMessages.push({
             role: 'assistant',
-            content: mainResponse,
+            content: enhancedResponse,
             timestamp: new Date()
           });
         }
@@ -446,6 +535,8 @@ export default function DiagnosisResultPage() {
 
   return (
     <div className="container mx-auto px-4 py-6">
+      <style dangerouslySetInnerHTML={{ __html: markdownStyles }} />
+      
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-blue-700 mb-2">Kết quả chẩn đoán</h1>
@@ -549,11 +640,22 @@ export default function DiagnosisResultPage() {
                     <div
                       className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
                         message.role === 'user'
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-blue-600 text-white user-message'
+                          : 'bg-gray-100 text-gray-800 assistant-message'
                       }`}
                     >
-                      <p className="whitespace-pre-line break-words">{safeExtractContent(message.content)}</p>
+                      <div className="markdown-content">
+                        <ReactMarkdown 
+                          // remarkPlugins={[remarkGfm]}
+                          components={{
+                            // Tùy chỉnh cách hiển thị các thành phần markdown
+                            p: ({node, ...props}) => <p style={{whiteSpace: 'pre-wrap'}} {...props} />,
+                            li: ({node, ...props}) => <li style={{whiteSpace: 'pre-wrap'}} {...props} />
+                          }}
+                        >
+                          {safeExtractContent(message.content)}
+                        </ReactMarkdown>
+                      </div>
                       {message.timestamp && (
                         <p className={`text-xs mt-1 ${
                           message.role === 'user' ? 'text-blue-100' : 'text-gray-500'
