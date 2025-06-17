@@ -259,7 +259,7 @@ export default function DiagnosisResultPage() {
         const parsedResult = JSON.parse(storedResult) as DiagnosisResult;
         setDiagnosisResult(parsedResult);
         
-        // Process labels for display
+                  // Process labels for display
         if (parsedResult.labels && parsedResult.labels.length > 0) {
           let formattedLabels: Disease[] = [];
           
@@ -267,10 +267,15 @@ export default function DiagnosisResultPage() {
             const labelArray = parsedResult.labels as LabelArray;
             formattedLabels = labelArray.map((label) => ({
               name: label[0],
-              score: label[1]
+              // Đảm bảo score không bao giờ âm hoặc NaN, mặc định là 0 nếu không hợp lệ
+              score: typeof label[1] === 'number' && !isNaN(label[1]) ? Math.max(0, label[1]) : 0
             }));
           } else {
-            formattedLabels = parsedResult.labels as Disease[];
+            // Đảm bảo score không bao giờ âm hoặc NaN
+            formattedLabels = (parsedResult.labels as Disease[]).map(disease => ({
+              ...disease,
+              score: typeof disease.score === 'number' && !isNaN(disease.score) ? Math.max(0, disease.score) : 0
+            }));
           }
           
           formattedLabels.sort((a, b) => b.score - a.score);
@@ -530,8 +535,7 @@ export default function DiagnosisResultPage() {
     );
   }
 
-  const mostLikelyDisease = processedLabels.length > 0 ? processedLabels[0] : null;
-  const mostLikelyDiseaseInfo = mostLikelyDisease ? getDiseaseInfo(mostLikelyDisease.name) : null;
+  // Không cần tính toán bệnh có khả năng cao nhất nữa vì đã bỏ phần hiển thị
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -569,23 +573,6 @@ export default function DiagnosisResultPage() {
             {processedLabels.length > 0 && (
               <div className="bg-white rounded-lg shadow-md p-4">
                 <h3 className="text-lg font-semibold mb-3 text-gray-700">Khả năng các bệnh</h3>
-                {mostLikelyDisease && mostLikelyDiseaseInfo && (
-                  <div className="bg-blue-50 border-l-4 border-blue-500 p-3 mb-4">
-                    <p className="text-sm text-blue-700">
-                      Chẩn đoán khả năng cao nhất: 
-                      {mostLikelyDiseaseInfo.disease ? (
-                        <Link 
-                          href={ROUTES.DISEASE_DETAIL(mostLikelyDiseaseInfo.disease.id)}
-                          className="font-semibold hover:underline ml-1"
-                        >
-                          {mostLikelyDiseaseInfo.displayName}
-                        </Link>
-                      ) : (
-                        <span className="font-semibold ml-1">{mostLikelyDiseaseInfo.displayName}</span>
-                      )}
-                    </p>
-                  </div>
-                )}
                 <div className="space-y-3 max-h-60 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400">
                   {processedLabels.slice(0, 5).map((disease, index) => {
                     const diseaseInfo = getDiseaseInfo(disease.name);
